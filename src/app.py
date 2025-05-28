@@ -1,10 +1,17 @@
 import streamlit as st
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
 
-from .models import create_model, get_available_models
-from .utils import setup_logging, get_app_config, get_logging_config, get_chat_config
+# プロジェクトルートをパスに追加
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from src.models import create_model, get_available_models
+from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config
 
 # 環境変数の読み込み
 load_dotenv()

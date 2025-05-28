@@ -83,11 +83,11 @@ GOOGLE_API_KEY=your_google_api_key_here
 ### ローカル実行
 
 ```bash
-# 推奨: モジュールとして実行
-uv run python -m src
-
-# または直接実行
+# 推奨: 直接実行
 uv run streamlit run src/app.py
+
+# または指定ポートで実行
+uv run streamlit run src/app.py --server.port=8502
 ```
 
 アプリケーションは http://localhost:8501 でアクセスできます。
