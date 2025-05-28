@@ -52,10 +52,27 @@ class TestCreateModel:
             max_tokens=1000
         )
     
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-openai-key"})
+    @patch('models.ChatOpenAI')
+    def test_create_openai_gpt41_model(self, mock_openai):
+        """OpenAI GPT-4.1モデルの作成テスト"""
+        mock_instance = MagicMock()
+        mock_openai.return_value = mock_instance
+        
+        result = create_model("GPT-4.1")
+        
+        assert result == mock_instance
+        mock_openai.assert_called_once_with(
+            model="gpt-4.1",
+            openai_api_key="test-openai-key",
+            temperature=0.7,
+            max_tokens=1000
+        )
+    
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"})
     @patch('models.ChatAnthropic')
-    def test_create_anthropic_model(self, mock_anthropic):
-        """Anthropicモデルの作成テスト"""
+    def test_create_anthropic_sonnet_model(self, mock_anthropic):
+        """Anthropic Claude Sonnet 4モデルの作成テスト"""
         mock_instance = MagicMock()
         mock_anthropic.return_value = mock_instance
         
@@ -64,6 +81,23 @@ class TestCreateModel:
         assert result == mock_instance
         mock_anthropic.assert_called_once_with(
             model="claude-sonnet-4-20250514",
+            anthropic_api_key="test-anthropic-key",
+            temperature=0.7,
+            max_tokens=1000
+        )
+    
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"})
+    @patch('models.ChatAnthropic')
+    def test_create_anthropic_opus_model(self, mock_anthropic):
+        """Anthropic Claude Opus 4モデルの作成テスト"""
+        mock_instance = MagicMock()
+        mock_anthropic.return_value = mock_instance
+        
+        result = create_model("Claude Opus 4")
+        
+        assert result == mock_instance
+        mock_anthropic.assert_called_once_with(
+            model="claude-opus-4-20250514",
             anthropic_api_key="test-anthropic-key",
             temperature=0.7,
             max_tokens=1000
@@ -144,6 +178,26 @@ class TestGetAvailableModels:
         providers_with_keys = {"openai", "anthropic"}
         actual_providers = {config["provider"] for config in available.values()}
         assert providers_with_keys.issubset(actual_providers), f"期待されるプロバイダー {providers_with_keys} が見つかりません: {actual_providers}"
+    
+    @patch.dict(os.environ, {
+        "OPENAI_API_KEY": "test-openai-key",
+        "ANTHROPIC_API_KEY": "test-anthropic-key",
+        "GOOGLE_API_KEY": "test-google-key"
+    })
+    def test_get_available_models_all_providers(self):
+        """全プロバイダーのAPIキーが設定されている場合のテスト"""
+        available = get_available_models()
+        
+        # 全プロバイダーのモデルが含まれることを確認
+        model_names = list(available.keys())
+        assert any("GPT" in name for name in model_names), f"GPTモデルが見つかりません: {model_names}"
+        assert any("Claude" in name for name in model_names), f"Claudeモデルが見つかりません: {model_names}"
+        assert any("Gemini" in name for name in model_names), f"Geminiモデルが見つかりません: {model_names}"
+        
+        # 全プロバイダーが含まれることを確認
+        expected_providers = {"openai", "anthropic", "google"}
+        actual_providers = {config["provider"] for config in available.values()}
+        assert expected_providers == actual_providers, f"期待されるプロバイダー {expected_providers} と実際 {actual_providers} が一致しません"
     
     @patch.dict(os.environ, {}, clear=True)
     def test_get_available_models_no_keys(self):
