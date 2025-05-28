@@ -1,5 +1,5 @@
 """
-models.py のテスト
+src.models パッケージのテスト
 """
 import pytest
 from unittest.mock import patch, MagicMock

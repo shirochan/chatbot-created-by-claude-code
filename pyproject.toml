@@ -1,7 +1,7 @@
 [project]
 name = "chatbot-created-by-claude-code"
 version = "0.1.0"
-description = "Streamlit-based AI chatbot using OpenAI API"
+description = "Multi-provider AI chatbot using LangChain and Streamlit"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -17,7 +17,11 @@ dependencies = [
 ]
 
 # [project.scripts]
-# chatbot = "streamlit run app.py"
+# chatbot = "chatbot:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

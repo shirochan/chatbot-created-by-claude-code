@@ -1,5 +1,5 @@
 """
-app.py のテスト
+src.app モジュールのテスト
 Streamlitアプリケーションの基本機能をテスト
 """
 import pytest
