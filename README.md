@@ -21,18 +21,19 @@ LangChainを使用したマルチプロバイダー対応のAIチャットボッ
 ```
 chatbot-created-by-claude-code/
 ├── src/                        # ソースコード
+│   ├── __main__.py             # モジュール実行エントリーポイント
 │   ├── app.py                  # メインアプリケーション
 │   ├── models/                 # AIモデル管理
 │   │   ├── config.py           # モデル設定
 │   │   └── factory.py          # モデル作成機能
 │   └── utils/                  # ユーティリティ
+│       ├── config.py           # 設定管理
 │       └── logging.py          # ログ設定
 ├── tests/                      # テストスイート
 │   ├── test_app.py            # アプリケーションテスト
 │   └── test_models.py         # モデルテスト
 ├── config.yaml                # アプリケーション設定
 ├── Dockerfile                 # コンテナ設定
-├── run_app.py                 # アプリケーション起動スクリプト
 ├── pyproject.toml             # プロジェクト設定
 └── .env.example               # 環境変数テンプレート
 ```
@@ -79,8 +80,8 @@ GOOGLE_API_KEY=your_google_api_key_here
 ### ローカル実行
 
 ```bash
-# 推奨: 起動スクリプトを使用
-uv run python run_app.py
+# 推奨: モジュールとして実行
+uv run python -m src
 
 # または直接実行
 uv run streamlit run src/app.py
@@ -127,7 +128,7 @@ uv run pytest --cov=src
 - **uv**: モダンなPythonパッケージマネージャー
 - **pytest**: テストフレームワーク
 - **Docker**: コンテナ化
-- **PyYAML**: 設定管理
+- **PyYAML**: YAML設定ファイル管理
 
 ## ⚙️ 設定
 
@@ -139,13 +140,14 @@ uv run pytest --cov=src
 app:
   title: "AIチャットボット"
   page_icon: "🤖"
+  layout: "wide"                # centered, wide
   
 logging:
-  level: "INFO"
+  level: "INFO"                 # DEBUG, INFO, WARNING, ERROR
   
 chat:
   max_history: 100
-  default_model: "GPT-4o"
+  default_model: "GPT-4o"       # デフォルトで選択されるモデル
 ```
 
 ### 環境変数
