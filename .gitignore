@@ -16,6 +16,7 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -23,20 +24,33 @@ MANIFEST
 
 # Environment variables
 .env
+.env.local
+.env.production
+.env.staging
 
-# Virtual environment
+# Virtual environments
+.venv/
 venv/
-env/
 ENV/
+env/
 env.bak/
 venv.bak/
 
-# IDE
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Jupyter
+.ipynb_checkpoints
 
 # OS
 .DS_Store
@@ -47,5 +61,15 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
+# Logs
+*.log
+logs/
+
 # Streamlit
 .streamlit/
+
+# Dependencies
+node_modules/
+
+# Docker
+Dockerfile.dev

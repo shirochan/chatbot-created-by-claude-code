@@ -205,6 +205,7 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "openai" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "streamlit" },
     { name = "watchdog" },
 ]
@@ -223,6 +224,7 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=0.3.18" },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "streamlit", specifier = ">=1.28.0" },
     { name = "watchdog", specifier = ">=6.0.0" },
 ]

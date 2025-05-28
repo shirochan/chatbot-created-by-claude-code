@@ -1,0 +1,25 @@
+# アプリケーション設定
+app:
+  title: "AIチャットボット"
+  page_icon: "🤖"
+  layout: "wide"
+  initial_sidebar_state: "auto"
+
+# ログ設定
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Streamlit設定
+streamlit:
+  server:
+    port: 8501
+    headless: true
+  browser:
+    gatherUsageStats: false
+
+# チャット設定
+chat:
+  max_history: 100
+  default_model: "GPT-4o"
+  show_model_description: true

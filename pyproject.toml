@@ -13,13 +13,14 @@ dependencies = [
     "langchain-anthropic>=0.3.14",
     "langchain-google-genai>=2.1.4",
     "watchdog>=6.0.0",
+    "pyyaml>=6.0",
 ]
 
 # [project.scripts]
 # chatbot = "streamlit run app.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["src"]
 
 [build-system]
 requires = ["hatchling"]

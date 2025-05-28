@@ -1,11 +1,22 @@
 import streamlit as st
 import os
+import sys
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
-from models import create_model, get_available_models
+
+# プロジェクトルートをパスに追加
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from src.models import create_model, get_available_models
+from src.utils import setup_logging
 
 # 環境変数の読み込み
 load_dotenv()
+
+# ログ設定
+logger = setup_logging(level="INFO", logger_name="chatbot")
 
 def show_api_key_error():
     """APIキー未設定時の共通エラーメッセージ"""
