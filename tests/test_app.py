@@ -1,5 +1,5 @@
 """
-app.py のテスト
+src.app モジュールのテスト
 Streamlitアプリケーションの基本機能をテスト
 """
 import pytest
@@ -15,7 +15,7 @@ class TestAppImports:
     
     def test_import_models(self):
         """modelsモジュールのインポートテスト"""
-        from models import ModelConfig, create_model, get_available_models
+        from src.models import ModelConfig, create_model, get_available_models
         assert ModelConfig is not None
         assert create_model is not None
         assert get_available_models is not None
@@ -56,7 +56,7 @@ class TestAppConfiguration:
 class TestSessionStateInitialization:
     """セッション状態の初期化テスト"""
     
-    @patch('models.get_available_models')
+    @patch('src.models.get_available_models')
     def test_session_state_messages_init(self, mock_get_models):
         """メッセージセッション状態の初期化テスト"""
         mock_get_models.return_value = {"GPT-4o": {"provider": "openai"}}
@@ -71,7 +71,7 @@ class TestSessionStateInitialization:
         assert "messages" in session_state
         assert session_state["messages"] == []
     
-    @patch('models.get_available_models')
+    @patch('src.models.get_available_models')
     def test_session_state_model_selection_init(self, mock_get_models):
         """モデル選択セッション状態の初期化テスト"""
         mock_models = {
@@ -130,8 +130,8 @@ class TestMessageProcessing:
 class TestModelIntegration:
     """モデル統合のテスト"""
     
-    @patch('models.create_model')
-    @patch('models.get_available_models')
+    @patch('src.models.create_model')
+    @patch('src.models.get_available_models')
     def test_model_selection_validation(self, mock_get_models, mock_create_model):
         """モデル選択の検証テスト"""
         # 利用可能なモデルを設定
@@ -154,7 +154,7 @@ class TestModelIntegration:
         assert model is not None
         mock_create_model.assert_called_once_with(selected_model)
     
-    @patch('models.create_model')
+    @patch('src.models.create_model')
     def test_model_creation_failure_handling(self, mock_create_model):
         """モデル作成失敗時の処理テスト"""
         # モデル作成が失敗する場合をシミュレート
@@ -173,13 +173,13 @@ class TestErrorHandling:
     def test_missing_api_key_scenario(self):
         """APIキー未設定時のシナリオテスト"""
         with patch.dict(os.environ, {}, clear=True):
-            from models import get_available_models
+            from src.models import get_available_models
             
             available_models = get_available_models()
             # APIキーが設定されていない場合、利用可能なモデルは0個
             assert len(available_models) == 0
     
-    @patch('models.create_model')
+    @patch('src.models.create_model')
     def test_model_invoke_error_handling(self, mock_create_model):
         """モデル呼び出しエラーのハンドリングテスト"""
         # モデルが例外を投げる場合をシミュレート
@@ -209,7 +209,7 @@ class TestUtilityFunctions:
         # ファイルが存在しない場合はFalseが返される
         assert isinstance(result, bool)
     
-    @patch('models.get_available_models')
+    @patch('src.models.get_available_models')
     def test_model_description_display(self, mock_get_models):
         """モデル説明表示のテスト"""
         mock_models = {

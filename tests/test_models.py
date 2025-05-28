@@ -1,10 +1,10 @@
 """
-models.py のテスト
+src.models パッケージのテスト
 """
 import pytest
 from unittest.mock import patch, MagicMock
 import os
-from models import (
+from src.models import (
     ModelConfig, 
     create_model, 
     get_available_models, 
@@ -36,7 +36,7 @@ class TestCreateModel:
     """create_model関数のテスト"""
     
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-openai-key"})
-    @patch('models.ChatOpenAI')
+    @patch('src.models.factory.ChatOpenAI')
     def test_create_openai_model(self, mock_openai):
         """OpenAIモデルの作成テスト"""
         mock_instance = MagicMock()
@@ -53,7 +53,7 @@ class TestCreateModel:
         )
     
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-openai-key"})
-    @patch('models.ChatOpenAI')
+    @patch('src.models.factory.ChatOpenAI')
     def test_create_openai_gpt41_model(self, mock_openai):
         """OpenAI GPT-4.1モデルの作成テスト"""
         mock_instance = MagicMock()
@@ -70,7 +70,7 @@ class TestCreateModel:
         )
     
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"})
-    @patch('models.ChatAnthropic')
+    @patch('src.models.factory.ChatAnthropic')
     def test_create_anthropic_sonnet_model(self, mock_anthropic):
         """Anthropic Claude Sonnet 4モデルの作成テスト"""
         mock_instance = MagicMock()
@@ -87,7 +87,7 @@ class TestCreateModel:
         )
     
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"})
-    @patch('models.ChatAnthropic')
+    @patch('src.models.factory.ChatAnthropic')
     def test_create_anthropic_opus_model(self, mock_anthropic):
         """Anthropic Claude Opus 4モデルの作成テスト"""
         mock_instance = MagicMock()
@@ -104,7 +104,7 @@ class TestCreateModel:
         )
     
     @patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"})
-    @patch('models.ChatGoogleGenerativeAI')
+    @patch('src.models.factory.ChatGoogleGenerativeAI')
     def test_create_google_model(self, mock_google):
         """Googleモデルの作成テスト"""
         mock_instance = MagicMock()
@@ -132,7 +132,7 @@ class TestCreateModel:
         assert result is None
     
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch('models.ChatOpenAI')
+    @patch('src.models.factory.ChatOpenAI')
     def test_create_model_with_custom_params(self, mock_openai):
         """カスタムパラメータでのモデル作成テスト"""
         mock_instance = MagicMock()
@@ -149,7 +149,7 @@ class TestCreateModel:
         )
     
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    @patch('models.ChatOpenAI')
+    @patch('src.models.factory.ChatOpenAI')
     def test_create_model_exception_handling(self, mock_openai):
         """モデル作成時の例外処理テスト"""
         mock_openai.side_effect = Exception("API Error")
@@ -235,9 +235,9 @@ class TestIntegration:
         "ANTHROPIC_API_KEY": "test-anthropic-key",
         "GOOGLE_API_KEY": "test-google-key"
     })
-    @patch('models.ChatOpenAI')
-    @patch('models.ChatAnthropic')
-    @patch('models.ChatGoogleGenerativeAI')
+    @patch('src.models.factory.ChatOpenAI')
+    @patch('src.models.factory.ChatAnthropic')
+    @patch('src.models.factory.ChatGoogleGenerativeAI')
     def test_end_to_end_workflow(self, mock_google, mock_anthropic, mock_openai):
         """エンドツーエンドのワークフローテスト"""
         # モックの設定

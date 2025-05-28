@@ -1,11 +1,31 @@
 import streamlit as st
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
-from models import create_model, get_available_models
+
+# プロジェクトルートをパスに追加
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from src.models import create_model, get_available_models
+from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config
 
 # 環境変数の読み込み
 load_dotenv()
+
+# 設定の読み込み
+app_config = get_app_config()
+logging_config = get_logging_config()
+chat_config = get_chat_config()
+
+# ログ設定
+logger = setup_logging(
+    level=logging_config.get("level", "INFO"), 
+    logger_name="chatbot"
+)
 
 def show_api_key_error():
     """APIキー未設定時の共通エラーメッセージ"""
@@ -13,13 +33,13 @@ def show_api_key_error():
 
 # ページ設定
 st.set_page_config(
-    page_title="AIチャットボット",
-    page_icon="🤖",
-    layout="centered"
+    page_title=app_config.get("title", "AIチャットボット"),
+    page_icon=app_config.get("page_icon", "🤖"),
+    layout=app_config.get("layout", "centered")
 )
 
 # タイトル
-st.title("🤖 AIチャットボット")
+st.title(f"{app_config.get('page_icon', '🤖')} {app_config.get('title', 'AIチャットボット')}")
 
 # セッション状態の初期化
 if "messages" not in st.session_state:
@@ -30,7 +50,11 @@ if "available_models" not in st.session_state:
 
 if "selected_model" not in st.session_state:
     if st.session_state.available_models:
-        st.session_state.selected_model = list(st.session_state.available_models.keys())[0]
+        default_model = chat_config.get("default_model", "GPT-4o")
+        if default_model in st.session_state.available_models:
+            st.session_state.selected_model = default_model
+        else:
+            st.session_state.selected_model = list(st.session_state.available_models.keys())[0]
     else:
         st.session_state.selected_model = None
 
