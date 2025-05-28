@@ -95,11 +95,17 @@ uv run streamlit run src/app.py --server.port=8502
 ### Docker実行
 
 ```bash
-# イメージのビルド
+# プロダクション用イメージのビルド
 docker build -t chatbot-app .
 
 # コンテナの実行
 docker run -p 8501:8501 --env-file .env chatbot-app
+
+# 開発用（テスト含む）イメージのビルド
+docker build --target builder -t chatbot-app-dev .
+
+# 開発用コンテナでテスト実行
+docker run --rm chatbot-app-dev uv run pytest -v
 ```
 
 ## 🧪 テスト
