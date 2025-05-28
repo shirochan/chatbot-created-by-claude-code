@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, AIMessage
-from models import create_model, get_available_models, ModelConfig
+from models import create_model, get_available_models
 
 # 環境変数の読み込み
 load_dotenv()

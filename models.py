@@ -12,6 +12,10 @@ from langchain_core.language_models import BaseChatModel
 # ロガーの設定
 logger = logging.getLogger(__name__)
 
+# デフォルト値の定数
+DEFAULT_TEMPERATURE = 0.7
+DEFAULT_MAX_TOKENS = 1000
+
 class ModelConfig:
     """AIモデルの設定クラス"""
     
@@ -71,8 +75,8 @@ def create_model(model_name: str, **kwargs) -> Optional[BaseChatModel]:
     
     # デフォルトパラメータ
     default_params = {
-        "temperature": kwargs.get("temperature", 0.7),
-        "max_tokens": kwargs.get("max_tokens", 1000)
+        "temperature": kwargs.get("temperature", DEFAULT_TEMPERATURE),
+        "max_tokens": kwargs.get("max_tokens", DEFAULT_MAX_TOKENS)
     }
     
     try:
