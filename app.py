@@ -108,35 +108,3 @@ with st.sidebar:
     if st.button("チャット履歴をクリア"):
         st.session_state.messages = []
         st.rerun()
-    
-    # 使用方法の説明
-    st.header("📖 使用方法")
-    st.markdown("""
-    1. `.env`ファイルを作成して各APIキーを設定
-    2. サイドバーでAIモデルを選択
-    3. チャット入力欄にメッセージを入力
-    4. Enterを押してAIと会話開始
-    """)
-    
-    st.header("🔧 セットアップ")
-    
-    # uvとpipの選択タブ
-    tab1, tab2 = st.tabs(["uv (推奨)", "pip"])
-    
-    with tab1:
-        st.code("""
-# 依存関係のインストール
-uv sync
-
-# アプリの実行
-uv run streamlit run app.py
-        """)
-    
-    with tab2:
-        st.code("""
-# 依存関係のインストール
-pip install -r requirements.txt
-
-# アプリの実行
-streamlit run app.py
-        """)
