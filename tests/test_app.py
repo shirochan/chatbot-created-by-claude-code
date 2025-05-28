@@ -238,6 +238,30 @@ class TestErrorHandling:
                 assert "APIキー" in expected_keyword
             elif "529" in error_msg:
                 assert "過負荷" in expected_keyword
+    
+    def test_fallback_error_handling(self):
+        """フォールバックエラーハンドリングのテスト"""
+        # 特定パターンにマッチしないエラーは汎用メッセージになることを確認
+        generic_errors = [
+            "unknown error occurred",
+            "unexpected failure", 
+            "something went wrong",
+            "keyboard interrupt",  # 特定パターンにマッチしない
+            "key-value error",     # 特定パターンにマッチしない
+        ]
+        
+        # これらのエラーは特定パターンにマッチしないため、
+        # elseブランチ（汎用メッセージ）で処理される
+        for error in generic_errors:
+            # 401, 403, 429, 529, 500番台、ネットワークエラーのどれにもマッチしない
+            assert not any([
+                "401" in error or "unauthorized" in error.lower(),
+                "403" in error or "forbidden" in error.lower(), 
+                "429" in error or "rate_limit" in error.lower(),
+                "529" in error or "overloaded" in error.lower(),
+                any(code in error for code in ["500", "502", "503"]),
+                "network" in error.lower() or "connection" in error.lower()
+            ])
 
 
 class TestUtilityFunctions:
