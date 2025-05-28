@@ -5,7 +5,7 @@ LangChainを使用したマルチプロバイダー対応のAIチャットボッ
 ## 🚀 機能
 
 - **マルチAIプロバイダー対応**: OpenAI、Anthropic、Google Geminiを統一インターフェースで利用
-- **リアルタイム会話**: ストリーミング対応のリアルタイムチャット
+- **リアルタイム会話**: AIとのインタラクティブなチャット
 - **モデル選択**: 5つのAIモデルから選択可能
   - GPT-4o (OpenAI)
   - GPT-4.1 (OpenAI) 
@@ -21,20 +21,27 @@ LangChainを使用したマルチプロバイダー対応のAIチャットボッ
 ```
 chatbot-created-by-claude-code/
 ├── src/                        # ソースコード
+│   ├── __init__.py             # パッケージ初期化
 │   ├── __main__.py             # モジュール実行エントリーポイント
 │   ├── app.py                  # メインアプリケーション
 │   ├── models/                 # AIモデル管理
+│   │   ├── __init__.py         # パッケージ初期化
 │   │   ├── config.py           # モデル設定
 │   │   └── factory.py          # モデル作成機能
 │   └── utils/                  # ユーティリティ
+│       ├── __init__.py         # パッケージ初期化
 │       ├── config.py           # 設定管理
 │       └── logging.py          # ログ設定
 ├── tests/                      # テストスイート
+│   ├── __init__.py             # パッケージ初期化
+│   ├── conftest.py             # テスト設定
 │   ├── test_app.py            # アプリケーションテスト
 │   └── test_models.py         # モデルテスト
 ├── config.yaml                # アプリケーション設定
 ├── Dockerfile                 # コンテナ設定
+├── pytest.ini                 # テスト設定
 ├── pyproject.toml             # プロジェクト設定
+├── uv.lock                    # 依存関係ロックファイル
 └── .env.example               # 環境変数テンプレート
 ```
 
@@ -108,8 +115,8 @@ uv run pytest
 # 詳細出力付きテスト
 uv run pytest -v
 
-# カバレッジ付きテスト
-uv run pytest --cov=src
+# 詳細な失敗情報付きテスト
+uv run pytest -vvs
 ```
 
 ## 📋 使用技術
@@ -137,17 +144,31 @@ uv run pytest --cov=src
 アプリケーション設定は `config.yaml` で管理：
 
 ```yaml
+# アプリケーション設定
 app:
   title: "AIチャットボット"
   page_icon: "🤖"
-  layout: "wide"                # centered, wide
-  
+  layout: "wide"                      # centered, wide
+  initial_sidebar_state: "auto"      # auto, expanded, collapsed
+
+# ログ設定
 logging:
-  level: "INFO"                 # DEBUG, INFO, WARNING, ERROR
-  
+  level: "INFO"                       # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Streamlit設定
+streamlit:
+  server:
+    port: 8501
+    headless: true
+  browser:
+    gatherUsageStats: false
+
+# チャット設定
 chat:
   max_history: 100
-  default_model: "GPT-4o"       # デフォルトで選択されるモデル
+  default_model: "GPT-4o"             # デフォルトで選択されるモデル
+  show_model_description: true        # モデル説明の表示
 ```
 
 ### 環境変数
