@@ -7,6 +7,10 @@ from models import create_model, get_available_models, ModelConfig
 # 環境変数の読み込み
 load_dotenv()
 
+def show_api_key_error():
+    """APIキー未設定時の共通エラーメッセージ"""
+    st.error("利用可能なモデルがありません。APIキーを設定してください。")
+
 # ページ設定
 st.set_page_config(
     page_title="AIチャットボット",
@@ -50,7 +54,7 @@ if prompt := st.chat_input("メッセージを入力してください..."):
             try:
                 # 選択されたモデルを取得
                 if not st.session_state.selected_model:
-                    st.error("利用可能なモデルがありません。APIキーを設定してください。")
+                    show_api_key_error()
                 elif not (model := create_model(st.session_state.selected_model)):
                     st.error(f"モデル '{st.session_state.selected_model}' の初期化に失敗しました。")
                 else:
@@ -104,7 +108,7 @@ with st.sidebar:
         if selected_model in available_models:
             st.info(f"📝 {available_models[selected_model]['description']}")
     else:
-        st.error("利用可能なモデルがありません。APIキーを設定してください。")
+        show_api_key_error()
     
     # チャット履歴のクリア
     if st.button("チャット履歴をクリア"):
