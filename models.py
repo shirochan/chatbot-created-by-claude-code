@@ -2,11 +2,15 @@
 AIモデルの設定と管理を行うモジュール
 """
 import os
+import logging
 from typing import Dict, Any, Optional
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.language_models import BaseChatModel
+
+# ロガーの設定
+logger = logging.getLogger(__name__)
 
 class ModelConfig:
     """AIモデルの設定クラス"""
@@ -91,7 +95,7 @@ def create_model(model_name: str, **kwargs) -> Optional[BaseChatModel]:
                 **default_params
             )
     except Exception as e:
-        print(f"モデル作成エラー: {e}")
+        logger.error(f"モデル作成エラー: {e}")
         return None
     
     return None

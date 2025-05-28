@@ -21,10 +21,12 @@ st.title("🤖 AIチャットボット")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "available_models" not in st.session_state:
+    st.session_state.available_models = get_available_models()
+
 if "selected_model" not in st.session_state:
-    available_models = get_available_models()
-    if available_models:
-        st.session_state.selected_model = list(available_models.keys())[0]
+    if st.session_state.available_models:
+        st.session_state.selected_model = list(st.session_state.available_models.keys())[0]
     else:
         st.session_state.selected_model = None
 
@@ -82,7 +84,7 @@ with st.sidebar:
     st.header("⚙️ 設定")
     
     # モデル選択
-    available_models = get_available_models()
+    available_models = st.session_state.available_models
     if available_models:
         st.subheader("🤖 AIモデル選択")
         
