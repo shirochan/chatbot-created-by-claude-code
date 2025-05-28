@@ -98,11 +98,12 @@ def create_model(model_name: str, **kwargs) -> Optional[BaseChatModel]:
                 google_api_key=api_key,
                 **default_params
             )
+        else:
+            logger.error(f"未対応のプロバイダー: {config['provider']} (モデル: {model_name})")
+            return None
     except Exception as e:
         logger.error(f"モデル作成エラー: {e}")
         return None
-    
-    return None
 
 def get_available_models() -> Dict[str, Dict[str, Any]]:
     """
