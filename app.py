@@ -79,10 +79,24 @@ with st.sidebar:
     """)
     
     st.header("🔧 セットアップ")
-    st.code("""
-    # 依存関係のインストール
-    pip install -r requirements.txt
     
-    # アプリの実行
-    streamlit run app.py
-    """)
+    # uvとpipの選択タブ
+    tab1, tab2 = st.tabs(["uv (推奨)", "pip"])
+    
+    with tab1:
+        st.code("""
+# 依存関係のインストール
+uv sync
+
+# アプリの実行
+uv run streamlit run app.py
+        """)
+    
+    with tab2:
+        st.code("""
+# 依存関係のインストール
+pip install -r requirements.txt
+
+# アプリの実行
+streamlit run app.py
+        """)
