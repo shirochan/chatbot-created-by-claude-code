@@ -50,7 +50,7 @@ chatbot-created-by-claude-code/
 ### 前提条件
 
 - Python 3.11+
-- uv（推奨）またはpip
+- uv (モダンなPythonパッケージマネージャー)
 
 ### インストール手順
 
@@ -62,11 +62,7 @@ cd chatbot-created-by-claude-code
 
 2. **依存関係のインストール**:
 ```bash
-# uvを使用（推奨）
 uv sync
-
-# またはpipを使用
-pip install -e .
 ```
 
 3. **環境変数の設定**:

@@ -19,10 +19,6 @@ dependencies = [
 # [project.scripts]
 # chatbot = "chatbot:main"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
