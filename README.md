@@ -11,6 +11,27 @@ StreamlitとOpenAI APIを使用したシンプルなチャットボットアプ�
 
 ## セットアップ
 
+### uvを使用する場合（推奨）
+
+1. 依存関係のインストール:
+```bash
+uv sync
+```
+
+2. 環境変数の設定:
+`.env`ファイルを作成し、OpenAI APIキーを設定
+```bash
+cp .env.example .env
+# .envファイルを編集してAPIキーを設定
+```
+
+3. アプリケーションの実行:
+```bash
+uv run streamlit run app.py
+```
+
+### pipを使用する場合
+
 1. 依存関係のインストール:
 ```bash
 pip install -r requirements.txt
