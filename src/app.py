@@ -104,8 +104,22 @@ if prompt := st.chat_input("メッセージを入力してください..."):
                     st.session_state.messages.append({"role": "assistant", "content": ai_response})
                 
             except Exception as e:
-                st.error(f"エラーが発生しました: {str(e)}")
-                st.info("APIキーが正しく設定されているか確認してください。")
+                error_message = str(e)
+                st.error(f"エラーが発生しました: {error_message}")
+                
+                # エラーの種類に応じて適切なアドバイスを表示
+                if "401" in error_message or "Unauthorized" in error_message:
+                    st.info("🔑 APIキーが無効です。正しいAPIキーを設定してください。")
+                elif "403" in error_message or "Forbidden" in error_message:
+                    st.info("🚫 APIキーの権限が不足しています。APIキーの設定を確認してください。")
+                elif "429" in error_message or "rate_limit" in error_message.lower():
+                    st.info("⏱️ レート制限に達しました。しばらく待ってから再試行してください。")
+                elif "529" in error_message or "overloaded" in error_message.lower():
+                    st.info("⚡ サーバーが過負荷状態です。しばらく待ってから再試行してください。")
+                elif "500" in error_message or "502" in error_message or "503" in error_message:
+                    st.info("🔧 サーバーで一時的な問題が発生しています。しばらく待ってから再試行してください。")
+                else:
+                    st.info("💡 問題が解決しない場合は、APIキーの設定やネットワーク接続を確認してください。")
 
 # サイドバーに設定オプション
 with st.sidebar:
