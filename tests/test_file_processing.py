@@ -120,6 +120,43 @@ class TestProcessPdf:
         assert result is None
         mock_pdfplumber.assert_called_once_with(mock_file)
         mock_pypdf2.assert_called_once_with(mock_file)
+    
+    @patch('src.utils.config.get_file_upload_config')
+    @patch('src.utils.file_processing.process_pdf_with_pypdf2')
+    @patch('src.utils.file_processing.process_pdf_with_pdfplumber')
+    def test_process_pdf_custom_engine_order(self, mock_pdfplumber, mock_pypdf2, mock_config):
+        """設定ファイルでカスタムエンジン順序を指定した場合のテスト"""
+        mock_file = Mock()
+        mock_pdfplumber.return_value = "pdfplumber result"
+        mock_pypdf2.return_value = "pypdf2 result"
+        
+        # PyPDF2を先に試すよう設定
+        mock_config.return_value = {
+            "pdf_processing": {
+                "engines": ["pypdf2", "pdfplumber"]
+            }
+        }
+        
+        result = process_pdf(mock_file)
+        
+        assert result == "pypdf2 result"
+        mock_pypdf2.assert_called_once_with(mock_file)
+        # pdfplumberは呼ばれない（PyPDF2で成功したため）
+        mock_pdfplumber.assert_not_called()
+    
+    @patch('src.utils.config.get_file_upload_config')
+    @patch('src.utils.file_processing.process_pdf_with_pypdf2')
+    @patch('src.utils.file_processing.process_pdf_with_pdfplumber')
+    def test_process_pdf_fallback_on_config_error(self, mock_pdfplumber, mock_pypdf2, mock_config):
+        """設定読み込みエラー時のフォールバック動作テスト"""
+        mock_file = Mock()
+        mock_pdfplumber.return_value = "pdfplumber result"
+        mock_config.side_effect = ImportError("config error")
+        
+        result = process_pdf(mock_file)
+        
+        assert result == "pdfplumber result"
+        mock_pdfplumber.assert_called_once_with(mock_file)
 
 class TestProcessPdfWithPyPdf2:
     """PyPDF2でのPDF処理テスト"""

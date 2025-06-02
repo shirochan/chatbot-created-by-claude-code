@@ -117,7 +117,7 @@ def process_pdf_with_pdfplumber(uploaded_file) -> Optional[str]:
 
 def process_pdf(uploaded_file) -> Optional[str]:
     """
-    PDFファイルからテキストを抽出（フォールバック機能付き）
+    PDFファイルからテキストを抽出（設定ファイルベースのエンジン優先順位）
     
     Args:
         uploaded_file: Streamlitのアップロードファイルオブジェクト
@@ -125,13 +125,31 @@ def process_pdf(uploaded_file) -> Optional[str]:
     Returns:
         str: 抽出されたテキスト または None
     """
-    # まずpdfplumberを試す（より高精度）
-    result = process_pdf_with_pdfplumber(uploaded_file)
+    # 設定ファイルからエンジンの優先順位を取得
+    try:
+        from .config import get_file_upload_config
+        file_config = get_file_upload_config()
+        engines = file_config.get("pdf_processing", {}).get("engines", ["pdfplumber", "pypdf2"])
+    except ImportError:
+        # フォールバック: デフォルトの順序
+        engines = ["pdfplumber", "pypdf2"]
     
-    if result is None:
-        # フォールバックとしてPyPDF2を使用
-        logger.info("pdfplumberが失敗したため、PyPDF2でリトライします")
-        result = process_pdf_with_pypdf2(uploaded_file)
+    result = None
+    
+    # 設定された順序でエンジンを試行
+    for engine in engines:
+        if engine.lower() == "pdfplumber":
+            result = process_pdf_with_pdfplumber(uploaded_file)
+            if result is not None:
+                break
+            logger.info("pdfplumberが失敗、次のエンジンを試します")
+        elif engine.lower() == "pypdf2":
+            result = process_pdf_with_pypdf2(uploaded_file)
+            if result is not None:
+                break
+            logger.info("PyPDF2が失敗、次のエンジンを試します")
+        else:
+            logger.warning(f"未知のPDFエンジン: {engine}")
     
     return result
 
