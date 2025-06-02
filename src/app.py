@@ -61,6 +61,10 @@ if "selected_model" not in st.session_state:
     else:
         st.session_state.selected_model = None
 
+# ファイルアップロードリセット用のカウンター
+if "file_uploader_key" not in st.session_state:
+    st.session_state.file_uploader_key = 0
+
 # サイドバー統合（ファイルアップロード + 設定）
 with st.sidebar:
     # ファイルアップロード機能
@@ -68,7 +72,8 @@ with st.sidebar:
     uploaded_file = st.file_uploader(
         "画像またはPDFファイルをアップロード",
         type=['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'pdf'],
-        help="対応形式: PNG, JPG, JPEG, GIF, BMP, WebP, PDF\nファイルサイズ制限: 画像 10MB、PDF 50MB"
+        help="対応形式: PNG, JPG, JPEG, GIF, BMP, WebP, PDF\nファイルサイズ制限: 画像 10MB、PDF 50MB",
+        key=f"file_uploader_{st.session_state.file_uploader_key}"
     )
     
     if uploaded_file is not None:
@@ -80,7 +85,7 @@ with st.sidebar:
             try:
                 image, description = process_image(uploaded_file)
                 if image:
-                    st.image(image, caption=uploaded_file.name, use_column_width=True)
+                    st.image(image, caption=uploaded_file.name, use_container_width=True)
                     with st.expander("画像情報"):
                         st.text(description)
             except Exception as e:
@@ -106,6 +111,44 @@ with st.sidebar:
     
     # 区切り線
     st.divider()
+    
+    # モデル選択をサイドバーに移動
+    st.header("⚙️ 設定")
+    
+    # モデル選択
+    available_models = st.session_state.available_models
+    if available_models:
+        st.subheader("🤖 AIモデル選択")
+        
+        model_names = list(available_models.keys())
+        selected_model = st.selectbox(
+            "使用するモデルを選択:",
+            model_names,
+            index=model_names.index(st.session_state.selected_model) if st.session_state.selected_model in model_names else 0
+        )
+        
+        # モデルが変更された場合
+        if selected_model != st.session_state.selected_model:
+            st.session_state.selected_model = selected_model
+            st.rerun()
+        
+        # 選択されたモデルの説明を表示
+        if selected_model in available_models:
+            model_info = available_models[selected_model]
+            description = model_info['description']
+            supports_vision = model_info.get('supports_vision', False)
+            
+            if supports_vision:
+                st.info(f"📝 {description}\n🖼️ **画像対応**: このモデルは画像を理解できます")
+            else:
+                st.info(f"📝 {description}\n⚠️ **画像非対応**: このモデルは画像を理解できません（テキスト情報のみ送信）")
+    else:
+        show_api_key_error()
+    
+    # チャット履歴のクリア
+    if st.button("チャット履歴をクリア"):
+        st.session_state.messages = []
+        st.rerun()
 
 # チャット履歴の表示
 for message in st.session_state.messages:
@@ -113,7 +156,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
         # 画像がある場合は表示
         if "image" in message:
-            st.image(message["image"], caption="アップロードされた画像")
+            st.image(message["image"], caption="アップロードされた画像", width=300)
 
 # ユーザー入力
 if prompt := st.chat_input("メッセージを入力してください..."):
@@ -146,11 +189,17 @@ if prompt := st.chat_input("メッセージを入力してください..."):
     # ユーザーメッセージを履歴に追加
     st.session_state.messages.append(user_message_data)
     
+    # ファイルがアップロードされていた場合はリセット
+    if uploaded_file is not None:
+        # ファイルアップロードをリセットするため、キーを変更してfile_uploaderを再生成
+        st.session_state.file_uploader_key += 1
+        st.rerun()
+    
     # ユーザーメッセージを表示
     with st.chat_message("user"):
         st.markdown(user_message_content)
         if "image" in user_message_data:
-            st.image(user_message_data["image"], caption="アップロードされた画像")
+            st.image(user_message_data["image"], caption="アップロードされた画像", width=300)
     
     # AIの応答を生成
     with st.chat_message("assistant"):
@@ -229,41 +278,3 @@ if prompt := st.chat_input("メッセージを入力してください..."):
                     st.info("🔧 サーバーで一時的な問題が発生しています。しばらく待ってから再試行してください。")
                 else:
                     st.info("💡 問題が解決しない場合は、APIキーの設定やネットワーク接続を確認してください。")
-
-    # 設定オプション
-    st.header("⚙️ 設定")
-    
-    # モデル選択
-    available_models = st.session_state.available_models
-    if available_models:
-        st.subheader("🤖 AIモデル選択")
-        
-        model_names = list(available_models.keys())
-        selected_model = st.selectbox(
-            "使用するモデルを選択:",
-            model_names,
-            index=model_names.index(st.session_state.selected_model) if st.session_state.selected_model in model_names else 0
-        )
-        
-        # モデルが変更された場合
-        if selected_model != st.session_state.selected_model:
-            st.session_state.selected_model = selected_model
-            st.rerun()
-        
-        # 選択されたモデルの説明を表示
-        if selected_model in available_models:
-            model_info = available_models[selected_model]
-            description = model_info['description']
-            supports_vision = model_info.get('supports_vision', False)
-            
-            if supports_vision:
-                st.info(f"📝 {description}\n🖼️ **画像対応**: このモデルは画像を理解できます")
-            else:
-                st.info(f"📝 {description}\n⚠️ **画像非対応**: このモデルは画像を理解できません（テキスト情報のみ送信）")
-    else:
-        show_api_key_error()
-    
-    # チャット履歴のクリア
-    if st.button("チャット履歴をクリア"):
-        st.session_state.messages = []
-        st.rerun()
