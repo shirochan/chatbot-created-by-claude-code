@@ -150,7 +150,7 @@ def get_file_type(file_name: str) -> str:
     
     extension = file_name.lower().split('.')[-1]
     
-    if extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg']:
+    if extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']:
         return 'image'
     elif extension == 'pdf':
         return 'pdf'

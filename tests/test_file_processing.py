@@ -27,7 +27,6 @@ class TestGetFileType:
         assert get_file_type("test.gif") == "image"
         assert get_file_type("test.bmp") == "image"
         assert get_file_type("test.webp") == "image"
-        assert get_file_type("test.svg") == "image"
         
     def test_pdf_files(self):
         """PDFファイルの判定テスト"""
@@ -38,6 +37,7 @@ class TestGetFileType:
         """未対応ファイルの判定テスト"""
         assert get_file_type("test.txt") == "unknown"
         assert get_file_type("test.docx") == "unknown"
+        assert get_file_type("test.svg") == "unknown"  # SVGは未対応
         assert get_file_type("") == "unknown"
         assert get_file_type(None) == "unknown"
 
