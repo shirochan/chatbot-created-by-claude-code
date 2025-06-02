@@ -11,7 +11,9 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.models import create_model, get_available_models
-from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config
+from src.models.config import ModelConfig
+from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config, get_file_upload_config
+from src.utils.file_processing import process_image, process_pdf, get_file_type, format_file_content_for_ai, encode_image_to_base64, get_image_mime_type
 
 # 環境変数の読み込み
 load_dotenv()
@@ -20,6 +22,7 @@ load_dotenv()
 app_config = get_app_config()
 logging_config = get_logging_config()
 chat_config = get_chat_config()
+file_upload_config = get_file_upload_config()
 
 # ログ設定
 logger = setup_logging(
@@ -58,19 +61,145 @@ if "selected_model" not in st.session_state:
     else:
         st.session_state.selected_model = None
 
+# ファイルアップロードリセット用のカウンター
+if "file_uploader_key" not in st.session_state:
+    st.session_state.file_uploader_key = 0
+
+# サイドバー統合（ファイルアップロード + 設定）
+with st.sidebar:
+    # ファイルアップロード機能
+    st.header("📁 ファイルアップロード")
+    uploaded_file = st.file_uploader(
+        "画像またはPDFファイルをアップロード",
+        type=['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'pdf'],
+        help="対応形式: PNG, JPG, JPEG, GIF, BMP, WebP, PDF\nファイルサイズ制限: 画像 10MB、PDF 50MB",
+        key=f"file_uploader_{st.session_state.file_uploader_key}"
+    )
+    
+    if uploaded_file is not None:
+        file_type = get_file_type(uploaded_file.name)
+        st.success(f"ファイルがアップロードされました: {uploaded_file.name}")
+        
+        if file_type == 'image':
+            # 画像プレビュー表示
+            try:
+                image, description = process_image(uploaded_file)
+                if image:
+                    st.image(image, caption=uploaded_file.name, use_container_width=True)
+                    with st.expander("画像情報"):
+                        st.text(description)
+            except Exception as e:
+                st.error(f"画像の表示に失敗しました: {e}")
+        
+        elif file_type == 'pdf':
+            # PDFファイル情報表示
+            st.info("📄 PDFファイルが選択されています")
+            with st.expander("PDFプレビュー"):
+                try:
+                    # ファイルポインタを先頭に戻す
+                    uploaded_file.seek(0)
+                    pdf_text = process_pdf(uploaded_file)
+                    if pdf_text:
+                        # 設定ファイルからプレビュー文字数を取得
+                        preview_length = file_upload_config.get("pdf_processing", {}).get("preview_length", 500)
+                        preview_text = pdf_text[:preview_length] + "..." if len(pdf_text) > preview_length else pdf_text
+                        st.text_area("内容プレビュー", preview_text, height=200, disabled=True)
+                    else:
+                        st.warning("PDFからテキストを抽出できませんでした")
+                except Exception as e:
+                    st.error(f"PDFの処理に失敗しました: {e}")
+    
+    # 区切り線
+    st.divider()
+    
+    # モデル選択をサイドバーに移動
+    st.header("⚙️ 設定")
+    
+    # モデル選択
+    available_models = st.session_state.available_models
+    if available_models:
+        st.subheader("🤖 AIモデル選択")
+        
+        model_names = list(available_models.keys())
+        selected_model = st.selectbox(
+            "使用するモデルを選択:",
+            model_names,
+            index=model_names.index(st.session_state.selected_model) if st.session_state.selected_model in model_names else 0
+        )
+        
+        # モデルが変更された場合
+        if selected_model != st.session_state.selected_model:
+            st.session_state.selected_model = selected_model
+            st.rerun()
+        
+        # 選択されたモデルの説明を表示
+        if selected_model in available_models:
+            model_info = available_models[selected_model]
+            description = model_info['description']
+            supports_vision = model_info.get('supports_vision', False)
+            
+            if supports_vision:
+                st.info(f"📝 {description}\n🖼️ **画像対応**: このモデルは画像を理解できます")
+            else:
+                st.info(f"📝 {description}\n⚠️ **画像非対応**: このモデルは画像を理解できません（テキスト情報のみ送信）")
+    else:
+        show_api_key_error()
+    
+    # チャット履歴のクリア
+    if st.button("チャット履歴をクリア"):
+        st.session_state.messages = []
+        st.rerun()
+
 # チャット履歴の表示
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        # 画像がある場合は表示
+        if "image" in message:
+            st.image(message["image"], caption="アップロードされた画像", width=300)
 
 # ユーザー入力
 if prompt := st.chat_input("メッセージを入力してください..."):
+    # ファイルがアップロードされている場合の処理
+    user_message_content = prompt
+    user_message_data = {"role": "user", "content": user_message_content}
+    
+    if uploaded_file is not None:
+        file_type = get_file_type(uploaded_file.name)
+        
+        if file_type == 'image':
+            # 画像処理
+            uploaded_file.seek(0)
+            image_result = process_image(uploaded_file)
+            if image_result:
+                image, description = image_result
+                user_message_content = f"{prompt}\n\n{description}"
+                user_message_data["image"] = image
+                user_message_data["content"] = user_message_content
+        
+        elif file_type == 'pdf':
+            # PDF処理
+            uploaded_file.seek(0)
+            pdf_text = process_pdf(uploaded_file)
+            if pdf_text:
+                file_content = format_file_content_for_ai(file_type, pdf_text, uploaded_file.name)
+                user_message_content = f"{prompt}\n\n{file_content}"
+                user_message_data["content"] = user_message_content
+    
     # ユーザーメッセージを履歴に追加
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append(user_message_data)
+    
+    # ファイルがアップロードされていた場合はリセット
+    if uploaded_file is not None:
+        # ファイルアップロードをリセットするため、キーを変更してfile_uploaderを再生成
+        st.session_state.file_uploader_key += 1
+        st.rerun()
     
     # ユーザーメッセージを表示
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(user_message_content)
+        if "image" in user_message_data:
+            st.image(user_message_data["image"], caption="アップロードされた画像", width=300)
     
     # AIの応答を生成
     with st.chat_message("assistant"):
@@ -84,9 +213,38 @@ if prompt := st.chat_input("メッセージを入力してください..."):
                 else:
                     # LangChainメッセージ形式に変換
                     langchain_messages = []
+                    model_config = ModelConfig.MODELS.get(st.session_state.selected_model, {})
+                    supports_vision = model_config.get("supports_vision", False)
+                    
                     for msg in st.session_state.messages:
                         if msg["role"] == "user":
-                            langchain_messages.append(HumanMessage(content=msg["content"]))
+                            # 画像がある場合の処理
+                            if "image" in msg and supports_vision:
+                                try:
+                                    # 画像をbase64エンコード
+                                    image = msg["image"]
+                                    image_format = image.format or "PNG"
+                                    base64_image = encode_image_to_base64(image, image_format)
+                                    mime_type = get_image_mime_type(image_format)
+                                    
+                                    # マルチモーダルメッセージを作成（LangChain辞書形式）
+                                    content = [
+                                        {"type": "text", "text": msg["content"]},
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {
+                                                "url": f"data:{mime_type};base64,{base64_image}"
+                                            }
+                                        }
+                                    ]
+                                    langchain_messages.append(HumanMessage(content=content))
+                                except Exception as e:
+                                    logger.error(f"画像処理エラー: {e}")
+                                    # エラー時はテキストのみ
+                                    langchain_messages.append(HumanMessage(content=msg["content"]))
+                            else:
+                                # テキストのみ、または画像非対応モデル
+                                langchain_messages.append(HumanMessage(content=msg["content"]))
                         elif msg["role"] == "assistant":
                             langchain_messages.append(AIMessage(content=msg["content"]))
                     
@@ -120,35 +278,3 @@ if prompt := st.chat_input("メッセージを入力してください..."):
                     st.info("🔧 サーバーで一時的な問題が発生しています。しばらく待ってから再試行してください。")
                 else:
                     st.info("💡 問題が解決しない場合は、APIキーの設定やネットワーク接続を確認してください。")
-
-# サイドバーに設定オプション
-with st.sidebar:
-    st.header("⚙️ 設定")
-    
-    # モデル選択
-    available_models = st.session_state.available_models
-    if available_models:
-        st.subheader("🤖 AIモデル選択")
-        
-        model_names = list(available_models.keys())
-        selected_model = st.selectbox(
-            "使用するモデルを選択:",
-            model_names,
-            index=model_names.index(st.session_state.selected_model) if st.session_state.selected_model in model_names else 0
-        )
-        
-        # モデルが変更された場合
-        if selected_model != st.session_state.selected_model:
-            st.session_state.selected_model = selected_model
-            st.rerun()
-        
-        # 選択されたモデルの説明を表示
-        if selected_model in available_models:
-            st.info(f"📝 {available_models[selected_model]['description']}")
-    else:
-        show_api_key_error()
-    
-    # チャット履歴のクリア
-    if st.button("チャット履歴をクリア"):
-        st.session_state.messages = []
-        st.rerun()

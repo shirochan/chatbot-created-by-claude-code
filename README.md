@@ -5,16 +5,18 @@ LangChainを使用したマルチプロバイダー対応のAIチャットボッ
 ## 🚀 機能
 
 - **マルチAIプロバイダー対応**: OpenAI、Anthropic、Google Geminiを統一インターフェースで利用
+- **マルチモーダル対応**: 画像、PDFファイルのアップロードとAIでの理解
 - **リアルタイム会話**: AIとのインタラクティブなチャット
 - **モデル選択**: 5つのAIモデルから選択可能
-  - GPT-4o (OpenAI)
-  - GPT-4.1 (OpenAI) 
-  - Claude Sonnet 4 (Anthropic)
-  - Claude Opus 4 (Anthropic)
-  - Gemini 2.5 Flash (Google)
+  - GPT-4o (OpenAI) - 🖼️ 画像対応
+  - GPT-4.1 (OpenAI) - 📝 テキストのみ
+  - Claude Sonnet 4 (Anthropic) - 🖼️ 画像対応
+  - Claude Opus 4 (Anthropic) - 🖼️ 画像対応
+  - Gemini 2.5 Flash (Google) - 🖼️ 画像対応
+- **ファイルアップロード**: PNG, JPG, JPEG, GIF, BMP, WebP, PDF対応
 - **チャット履歴**: セッション内でのメッセージ履歴管理
 - **レスポンシブUI**: Streamlitベースのクリーンなインターフェース
-- **包括的テスト**: 29のテストケースによる品質保証
+- **包括的テスト**: 50のテストケースによる品質保証
 
 ## 📦 プロジェクト構造
 
@@ -31,12 +33,14 @@ chatbot-created-by-claude-code/
 │   └── utils/                  # ユーティリティ
 │       ├── __init__.py         # パッケージ初期化
 │       ├── config.py           # 設定管理
-│       └── logging.py          # ログ設定
+│       ├── logging.py          # ログ設定
+│       └── file_processing.py  # ファイル処理（画像・PDF）
 ├── tests/                      # テストスイート
 │   ├── __init__.py             # パッケージ初期化
 │   ├── conftest.py             # テスト設定
 │   ├── test_app.py            # アプリケーションテスト
-│   └── test_models.py         # モデルテスト
+│   ├── test_models.py         # モデルテスト
+│   └── test_file_processing.py # ファイル処理テスト
 ├── config.yaml                # アプリケーション設定
 ├── Dockerfile                 # コンテナ設定
 ├── pytest.ini                 # テスト設定
@@ -92,6 +96,21 @@ uv run streamlit run src/app.py --server.port=8502
 
 アプリケーションは http://localhost:8501 でアクセスできます。
 
+### 📁 ファイルアップロード機能
+
+1. **サイドバーからファイルをアップロード**:
+   - 対応形式: PNG, JPG, JPEG, GIF, BMP, WebP, PDF
+   - 画像: リアルタイムプレビュー表示
+   - PDF: 内容プレビュー表示（先頭500文字）
+
+2. **マルチモーダル対応モデルを選択**:
+   - GPT-4o, Claude Sonnet 4, Claude Opus 4, Gemini 2.5 Flash
+   - 画像対応状況がUI上に表示されます
+
+3. **画像やPDFについて質問**:
+   - 「この画像について説明してください」
+   - 「このPDFの内容を要約してください」
+
 ### Docker実行
 
 ```bash
@@ -127,6 +146,8 @@ uv run pytest -vvs
 - **Python 3.11**: プログラミング言語
 - **Streamlit**: Webアプリケーションフレームワーク
 - **LangChain**: AI/LLMアプリケーション開発フレームワーク
+- **PIL/Pillow**: 画像処理ライブラリ
+- **pdfplumber + PyPDF2**: PDF処理（デュアルエンジン）
 
 ### AIプロバイダー
 - **OpenAI**: GPT-4oおよびGPT-4.1
@@ -138,6 +159,7 @@ uv run pytest -vvs
 - **pytest**: テストフレームワーク
 - **Docker**: コンテナ化
 - **PyYAML**: YAML設定ファイル管理
+- **base64**: 画像エンコーディング
 
 ## ⚙️ 設定
 

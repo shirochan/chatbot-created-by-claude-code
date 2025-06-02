@@ -23,3 +23,26 @@ chat:
   max_history: 100
   default_model: "GPT-4o"
   show_model_description: true
+
+# ファイルアップロード設定
+file_upload:
+  # 対応ファイル形式
+  supported_formats:
+    image: ["png", "jpg", "jpeg", "gif", "bmp", "webp"]
+    pdf: ["pdf"]
+  
+  # ファイルサイズ制限 (MB)
+  max_file_size:
+    image: 10
+    pdf: 50
+  
+  # 画像処理設定
+  image_processing:
+    default_format: "PNG"
+    quality: 95
+    max_dimension: 2048  # 最大幅・高さ (ピクセル)
+  
+  # PDF処理設定
+  pdf_processing:
+    preview_length: 500  # プレビュー文字数
+    engines: ["pdfplumber", "pypdf2"]  # 使用するエンジンの優先順位
