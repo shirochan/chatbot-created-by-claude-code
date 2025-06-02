@@ -55,3 +55,8 @@ def get_chat_config() -> Dict[str, Any]:
     """チャット設定を取得"""
     config = load_config()
     return config.get("chat", {})
+
+def get_file_upload_config() -> Dict[str, Any]:
+    """ファイルアップロード設定を取得"""
+    config = load_config()
+    return config.get("file_upload", {})

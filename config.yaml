@@ -29,7 +29,7 @@ file_upload:
   # 対応ファイル形式
   supported_formats:
     image: ["png", "jpg", "jpeg", "gif", "bmp", "webp"]
-    document: ["pdf"]
+    pdf: ["pdf"]
   
   # ファイルサイズ制限 (MB)
   max_file_size:

@@ -12,7 +12,7 @@ if str(project_root) not in sys.path:
 
 from src.models import create_model, get_available_models
 from src.models.config import ModelConfig
-from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config
+from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config, get_file_upload_config
 from src.utils.file_processing import process_image, process_pdf, get_file_type, format_file_content_for_ai, encode_image_to_base64, get_image_mime_type
 
 # 環境変数の読み込み
@@ -22,6 +22,7 @@ load_dotenv()
 app_config = get_app_config()
 logging_config = get_logging_config()
 chat_config = get_chat_config()
+file_upload_config = get_file_upload_config()
 
 # ログ設定
 logger = setup_logging(
@@ -60,13 +61,14 @@ if "selected_model" not in st.session_state:
     else:
         st.session_state.selected_model = None
 
-# ファイルアップロード機能
+# サイドバー統合（ファイルアップロード + 設定）
 with st.sidebar:
+    # ファイルアップロード機能
     st.header("📁 ファイルアップロード")
     uploaded_file = st.file_uploader(
         "画像またはPDFファイルをアップロード",
         type=['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'pdf'],
-        help="対応形式: PNG, JPG, JPEG, GIF, BMP, WebP, PDF"
+        help="対応形式: PNG, JPG, JPEG, GIF, BMP, WebP, PDF\nファイルサイズ制限: 画像 10MB、PDF 50MB"
     )
     
     if uploaded_file is not None:
@@ -93,13 +95,17 @@ with st.sidebar:
                     uploaded_file.seek(0)
                     pdf_text = process_pdf(uploaded_file)
                     if pdf_text:
-                        # 先頭500文字のプレビューを表示
-                        preview_text = pdf_text[:500] + "..." if len(pdf_text) > 500 else pdf_text
+                        # 設定ファイルからプレビュー文字数を取得
+                        preview_length = file_upload_config.get("pdf_processing", {}).get("preview_length", 500)
+                        preview_text = pdf_text[:preview_length] + "..." if len(pdf_text) > preview_length else pdf_text
                         st.text_area("内容プレビュー", preview_text, height=200, disabled=True)
                     else:
                         st.warning("PDFからテキストを抽出できませんでした")
                 except Exception as e:
                     st.error(f"PDFの処理に失敗しました: {e}")
+    
+    # 区切り線
+    st.divider()
 
 # チャット履歴の表示
 for message in st.session_state.messages:
@@ -224,8 +230,7 @@ if prompt := st.chat_input("メッセージを入力してください..."):
                 else:
                     st.info("💡 問題が解決しない場合は、APIキーの設定やネットワーク接続を確認してください。")
 
-# サイドバーに設定オプション（ファイルアップロード後に配置）
-with st.sidebar:
+    # 設定オプション
     st.header("⚙️ 設定")
     
     # モデル選択
