@@ -197,15 +197,17 @@ class ChatHistoryDatabase:
                 ORDER BY timestamp ASC
             '''
             
+            params = [conversation_id]
             if limit:
-                query += f' LIMIT {limit}'
+                query += ' LIMIT ?'
+                params.append(limit)
             
-            cursor.execute(query, (conversation_id,))
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             
             messages = []
             for row in rows:
-                role, content, has_image, image_data, image_format, timestamp = row
+                role, content, has_image, image_data, _, timestamp = row
                 
                 message = {
                     "role": role,
