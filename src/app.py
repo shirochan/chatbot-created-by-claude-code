@@ -272,15 +272,20 @@ if prompt := st.chat_input("メッセージを入力してください..."):
     # データベースに保存（自動保存が有効な場合）
     if history_config.get("management", {}).get("auto_save", True):
         try:
+            # セッションIDを確保
+            if not st.session_state.current_session_id:
+                new_session_id = history_manager.start_new_session(st.session_state.selected_model)
+                st.session_state.current_session_id = new_session_id
+            else:
+                # 既存のセッションIDをhistory_managerに設定
+                history_manager.set_current_session(st.session_state.current_session_id)
+            
             image_data = user_message_data.get("image")
             history_manager.save_user_message(
                 content=user_message_content,
                 image=image_data,
                 model_name=st.session_state.selected_model
             )
-            # セッションIDを更新
-            if not st.session_state.current_session_id:
-                st.session_state.current_session_id = history_manager.get_current_session_id()
         except Exception as e:
             logger.error(f"ユーザーメッセージの保存に失敗: {e}")
     
@@ -297,86 +302,89 @@ if prompt := st.chat_input("メッセージを入力してください..."):
             st.image(user_message_data["image"], caption="アップロードされた画像", width=300)
     
     # AIの応答を生成
-    with st.chat_message("assistant"):
-        with st.spinner("考え中..."):
-            try:
-                # 選択されたモデルを取得
-                if not st.session_state.selected_model:
-                    show_api_key_error()
-                elif not (model := create_model(st.session_state.selected_model)):
-                    st.error(f"モデル '{st.session_state.selected_model}' の初期化に失敗しました。")
-                else:
-                    # LangChainメッセージ形式に変換
-                    langchain_messages = []
-                    model_config = ModelConfig.MODELS.get(st.session_state.selected_model, {})
-                    supports_vision = model_config.get("supports_vision", False)
-                    
-                    for msg in st.session_state.messages:
-                        if msg["role"] == "user":
-                            # 画像がある場合の処理
-                            if "image" in msg and supports_vision:
-                                try:
-                                    # 画像をbase64エンコード
-                                    image = msg["image"]
-                                    image_format = image.format or "PNG"
-                                    base64_image = encode_image_to_base64(image, image_format)
-                                    mime_type = get_image_mime_type(image_format)
-                                    
-                                    # マルチモーダルメッセージを作成（LangChain辞書形式）
-                                    content = [
-                                        {"type": "text", "text": msg["content"]},
-                                        {
-                                            "type": "image_url",
-                                            "image_url": {
-                                                "url": f"data:{mime_type};base64,{base64_image}"
-                                            }
+    with st.spinner("考え中..."):
+        try:
+            # 選択されたモデルを取得
+            if not st.session_state.selected_model:
+                show_api_key_error()
+            elif not (model := create_model(st.session_state.selected_model)):
+                st.error(f"モデル '{st.session_state.selected_model}' の初期化に失敗しました。")
+            else:
+                # LangChainメッセージ形式に変換
+                langchain_messages = []
+                model_config = ModelConfig.MODELS.get(st.session_state.selected_model, {})
+                supports_vision = model_config.get("supports_vision", False)
+                
+                for msg in st.session_state.messages:
+                    if msg["role"] == "user":
+                        # 画像がある場合の処理
+                        if "image" in msg and supports_vision:
+                            try:
+                                # 画像をbase64エンコード
+                                image = msg["image"]
+                                image_format = image.format or "PNG"
+                                base64_image = encode_image_to_base64(image, image_format)
+                                mime_type = get_image_mime_type(image_format)
+                                
+                                # マルチモーダルメッセージを作成（LangChain辞書形式）
+                                content = [
+                                    {"type": "text", "text": msg["content"]},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:{mime_type};base64,{base64_image}"
                                         }
-                                    ]
-                                    langchain_messages.append(HumanMessage(content=content))
-                                except Exception as e:
-                                    logger.error(f"画像処理エラー: {e}")
-                                    # エラー時はテキストのみ
-                                    langchain_messages.append(HumanMessage(content=msg["content"]))
-                            else:
-                                # テキストのみ、または画像非対応モデル
+                                    }
+                                ]
+                                langchain_messages.append(HumanMessage(content=content))
+                            except Exception as e:
+                                logger.error(f"画像処理エラー: {e}")
+                                # エラー時はテキストのみ
                                 langchain_messages.append(HumanMessage(content=msg["content"]))
-                        elif msg["role"] == "assistant":
-                            langchain_messages.append(AIMessage(content=msg["content"]))
-                    
-                    # システムメッセージを追加
-                    system_message = HumanMessage(content="あなたは親切で有用なAIアシスタントです。日本語で丁寧に回答してください。")
-                    langchain_messages.insert(0, system_message)
-                    
-                    # AIから応答を取得
-                    response = model.invoke(langchain_messages)
-                    ai_response = response.content
-                    
-                    st.markdown(ai_response)
-                    
-                    # AIの応答を履歴に追加
-                    st.session_state.messages.append({"role": "assistant", "content": ai_response})
-                    
-                    # データベースに保存（自動保存が有効な場合）
-                    if history_config.get("management", {}).get("auto_save", True):
-                        try:
-                            history_manager.save_assistant_message(ai_response)
-                        except Exception as e:
-                            logger.error(f"AIメッセージの保存に失敗: {e}")
+                        else:
+                            # テキストのみ、または画像非対応モデル
+                            langchain_messages.append(HumanMessage(content=msg["content"]))
+                    elif msg["role"] == "assistant":
+                        langchain_messages.append(AIMessage(content=msg["content"]))
                 
-            except Exception as e:
-                error_message = str(e)
-                st.error(f"エラーが発生しました: {error_message}")
+                # システムメッセージを追加
+                system_message = HumanMessage(content="あなたは親切で有用なAIアシスタントです。日本語で丁寧に回答してください。")
+                langchain_messages.insert(0, system_message)
                 
-                # エラーの種類に応じて適切なアドバイスを表示
-                if "401" in error_message or "Unauthorized" in error_message:
-                    st.info("🔑 APIキーが無効です。正しいAPIキーを設定してください。")
-                elif "403" in error_message or "Forbidden" in error_message:
-                    st.info("🚫 APIキーの権限が不足しています。APIキーの設定を確認してください。")
-                elif "429" in error_message or "rate_limit" in error_message.lower():
-                    st.info("⏱️ レート制限に達しました。しばらく待ってから再試行してください。")
-                elif "529" in error_message or "overloaded" in error_message.lower():
-                    st.info("⚡ サーバーが過負荷状態です。しばらく待ってから再試行してください。")
-                elif "500" in error_message or "502" in error_message or "503" in error_message:
-                    st.info("🔧 サーバーで一時的な問題が発生しています。しばらく待ってから再試行してください。")
-                else:
-                    st.info("💡 問題が解決しない場合は、APIキーの設定やネットワーク接続を確認してください。")
+                # AIから応答を取得
+                response = model.invoke(langchain_messages)
+                ai_response = response.content
+                
+                # AIの応答を履歴に追加
+                st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                
+                # データベースに保存（自動保存が有効な場合）
+                if history_config.get("management", {}).get("auto_save", True):
+                    try:
+                        # セッションIDが設定されていることを確認
+                        if st.session_state.current_session_id:
+                            history_manager.set_current_session(st.session_state.current_session_id)
+                        history_manager.save_assistant_message(ai_response)
+                    except Exception as e:
+                        logger.error(f"AIメッセージの保存に失敗: {e}")
+                
+                # ページを再読み込みして新しいメッセージを表示
+                st.rerun()
+            
+        except Exception as e:
+            error_message = str(e)
+            st.error(f"エラーが発生しました: {error_message}")
+            
+            # エラーの種類に応じて適切なアドバイスを表示
+            if "401" in error_message or "Unauthorized" in error_message:
+                st.info("🔑 APIキーが無効です。正しいAPIキーを設定してください。")
+            elif "403" in error_message or "Forbidden" in error_message:
+                st.info("🚫 APIキーの権限が不足しています。APIキーの設定を確認してください。")
+            elif "429" in error_message or "rate_limit" in error_message.lower():
+                st.info("⏱️ レート制限に達しました。しばらく待ってから再試行してください。")
+            elif "529" in error_message or "overloaded" in error_message.lower():
+                st.info("⚡ サーバーが過負荷状態です。しばらく待ってから再試行してください。")
+            elif "500" in error_message or "502" in error_message or "503" in error_message:
+                st.info("🔧 サーバーで一時的な問題が発生しています。しばらく待ってから再試行してください。")
+            else:
+                st.info("💡 問題が解決しない場合は、APIキーの設定やネットワーク接続を確認してください。")
