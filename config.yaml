@@ -46,3 +46,17 @@ file_upload:
   pdf_processing:
     preview_length: 500  # プレビュー文字数
     engines: ["pdfplumber", "pypdf2"]  # 使用するエンジンの優先順位
+
+# チャット履歴設定
+history:
+  # データベース設定
+  database:
+    path: "chat_history.db"  # データベースファイルのパス
+    backup_enabled: true     # バックアップを有効にするか
+    backup_interval: 24      # バックアップ間隔（時間）
+  
+  # 履歴管理設定
+  management:
+    auto_save: true          # 自動保存を有効にするか（デフォルトで有効）
+    max_conversations: 1000  # 保存する最大会話数
+    max_messages_per_conversation: 500  # 会話あたりの最大メッセージ数

@@ -68,6 +68,10 @@ logs/
 # Streamlit
 .streamlit/
 
+# Chat history database
+chat_history.db
+*.db
+
 # Dependencies
 node_modules/
 
