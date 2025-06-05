@@ -60,3 +60,8 @@ def get_file_upload_config() -> Dict[str, Any]:
     """ファイルアップロード設定を取得"""
     config = load_config()
     return config.get("file_upload", {})
+
+def get_history_config() -> Dict[str, Any]:
+    """履歴管理設定を取得"""
+    config = load_config()
+    return config.get("history", {})

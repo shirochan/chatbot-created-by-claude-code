@@ -12,8 +12,10 @@ if str(project_root) not in sys.path:
 
 from src.models import create_model, get_available_models
 from src.models.config import ModelConfig
-from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config, get_file_upload_config
+from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config, get_file_upload_config, get_history_config
 from src.utils.file_processing import process_image, process_pdf, get_file_type, format_file_content_for_ai, encode_image_to_base64, get_image_mime_type
+from src.utils.history_manager import ChatHistoryManager
+from src.ui.history_sidebar import render_history_sidebar, load_conversation_if_selected
 
 # 環境変数の読み込み
 load_dotenv()
@@ -23,12 +25,17 @@ app_config = get_app_config()
 logging_config = get_logging_config()
 chat_config = get_chat_config()
 file_upload_config = get_file_upload_config()
+history_config = get_history_config()
 
 # ログ設定
 logger = setup_logging(
     level=logging_config.get("level", "INFO"), 
     logger_name="chatbot"
 )
+
+# 履歴管理の初期化
+db_path = history_config.get("database", {}).get("path", "chat_history.db")
+history_manager = ChatHistoryManager(db_path)
 
 def show_api_key_error():
     """APIキー未設定時の共通エラーメッセージ"""
@@ -48,6 +55,13 @@ st.title(f"{app_config.get('page_icon', '🤖')} {app_config.get('title', 'AIチ
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# 履歴管理のセッション状態初期化
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = None
+
+if "history_initialized" not in st.session_state:
+    st.session_state.history_initialized = False
+
 if "available_models" not in st.session_state:
     st.session_state.available_models = get_available_models()
 
@@ -65,8 +79,24 @@ if "selected_model" not in st.session_state:
 if "file_uploader_key" not in st.session_state:
     st.session_state.file_uploader_key = 0
 
-# サイドバー統合（ファイルアップロード + 設定）
+# 履歴から会話を読み込む処理
+load_conversation_if_selected(history_manager)
+
+# 現在のセッションID設定
+if st.session_state.current_session_id:
+    history_manager.set_current_session(st.session_state.current_session_id)
+
+# サイドバー統合（履歴管理 + ファイルアップロード + 設定）
 with st.sidebar:
+    # 履歴管理機能
+    if history_config.get("ui", {}).get("show_conversation_list", True):
+        selected_session = render_history_sidebar(history_manager)
+        if selected_session:
+            st.session_state["selected_conversation"] = selected_session
+            st.rerun()
+    
+    # 区切り線
+    st.divider()
     # ファイルアップロード機能
     st.header("📁 ファイルアップロード")
     uploaded_file = st.file_uploader(
@@ -189,6 +219,21 @@ if prompt := st.chat_input("メッセージを入力してください..."):
     # ユーザーメッセージを履歴に追加
     st.session_state.messages.append(user_message_data)
     
+    # データベースに保存（自動保存が有効な場合）
+    if history_config.get("management", {}).get("auto_save", True):
+        try:
+            image_data = user_message_data.get("image")
+            history_manager.save_user_message(
+                content=user_message_content,
+                image=image_data,
+                model_name=st.session_state.selected_model
+            )
+            # セッションIDを更新
+            if not st.session_state.current_session_id:
+                st.session_state.current_session_id = history_manager.get_current_session_id()
+        except Exception as e:
+            logger.error(f"ユーザーメッセージの保存に失敗: {e}")
+    
     # ファイルがアップロードされていた場合はリセット
     if uploaded_file is not None:
         # ファイルアップロードをリセットするため、キーを変更してfile_uploaderを再生成
@@ -260,6 +305,13 @@ if prompt := st.chat_input("メッセージを入力してください..."):
                     
                     # AIの応答を履歴に追加
                     st.session_state.messages.append({"role": "assistant", "content": ai_response})
+                    
+                    # データベースに保存（自動保存が有効な場合）
+                    if history_config.get("management", {}).get("auto_save", True):
+                        try:
+                            history_manager.save_assistant_message(ai_response)
+                        except Exception as e:
+                            logger.error(f"AIメッセージの保存に失敗: {e}")
                 
             except Exception as e:
                 error_message = str(e)
