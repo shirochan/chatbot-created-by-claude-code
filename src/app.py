@@ -15,7 +15,6 @@ from src.models.config import ModelConfig
 from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config, get_file_upload_config, get_history_config
 from src.utils.file_processing import process_image, process_pdf, get_file_type, format_file_content_for_ai, encode_image_to_base64, get_image_mime_type
 from src.utils.history_manager import ChatHistoryManager
-from src.ui.history_sidebar import render_history_sidebar, load_conversation_if_selected
 
 # 環境変数の読み込み
 load_dotenv()
@@ -79,24 +78,8 @@ if "selected_model" not in st.session_state:
 if "file_uploader_key" not in st.session_state:
     st.session_state.file_uploader_key = 0
 
-# 履歴から会話を読み込む処理
-load_conversation_if_selected(history_manager)
-
-# 現在のセッションID設定
-if st.session_state.current_session_id:
-    history_manager.set_current_session(st.session_state.current_session_id)
-
-# サイドバー統合（履歴管理 + ファイルアップロード + 設定）
+# サイドバー設定
 with st.sidebar:
-    # 履歴管理機能
-    if history_config.get("ui", {}).get("show_conversation_list", True):
-        selected_session = render_history_sidebar(history_manager)
-        if selected_session:
-            st.session_state["selected_conversation"] = selected_session
-            st.rerun()
-    
-    # 区切り線
-    st.divider()
     # ファイルアップロード機能
     st.header("📁 ファイルアップロード")
     uploaded_file = st.file_uploader(
@@ -175,10 +158,77 @@ with st.sidebar:
     else:
         show_api_key_error()
     
-    # チャット履歴のクリア
-    if st.button("チャット履歴をクリア"):
+    # 新しい会話を開始
+    if st.button("🆕 新しい会話", use_container_width=True):
+        # 現在のメッセージをクリア
         st.session_state.messages = []
+        # 新しいセッションを開始
+        new_session_id = history_manager.start_new_session()
+        st.session_state.current_session_id = new_session_id
+        st.success("新しい会話を開始しました")
         st.rerun()
+    
+    # 履歴一覧表示
+    st.divider()
+    st.subheader("📚 会話履歴")
+    
+    # 会話一覧を取得
+    conversations = history_manager.get_conversation_list(limit=10)
+    
+    if conversations:
+        for conv in conversations:
+            session_id = conv["session_id"]
+            title = conv["title"] or "無題の会話"
+            updated_at = conv["updated_at"]
+            message_count = conv["message_count"]
+            
+            # 日時をフォーマット
+            try:
+                from datetime import datetime
+                dt = datetime.fromisoformat(updated_at.replace('Z', '+00:00'))
+                formatted_time = dt.strftime("%m/%d %H:%M")
+            except:
+                formatted_time = "不明"
+            
+            # タイトルを短縮
+            display_title = title[:25] + "..." if len(title) > 25 else title
+            
+            # 会話選択と削除ボタンを並べたレイアウト
+            col1, col2 = st.columns([4, 1])
+            
+            with col1:
+                if st.button(
+                    f"💬 {display_title}",
+                    key=f"load_conv_{session_id}",
+                    help=f"メッセージ数: {message_count}\\n更新: {formatted_time}",
+                    use_container_width=True
+                ):
+                    # 会話を読み込む
+                    messages = history_manager.load_session_messages(session_id)
+                    if messages:
+                        st.session_state.messages = messages
+                        st.session_state.current_session_id = session_id
+                        history_manager.set_current_session(session_id)
+                        st.success(f"会話を読み込みました ({len(messages)}メッセージ)")
+                        st.rerun()
+            
+            with col2:
+                if st.button("🗑️", key=f"delete_conv_{session_id}", help="この会話を削除"):
+                    # 会話を削除
+                    if history_manager.delete_conversation(session_id):
+                        # 現在表示中の会話が削除された場合はクリア
+                        if st.session_state.current_session_id == session_id:
+                            st.session_state.messages = []
+                            st.session_state.current_session_id = None
+                        st.success("会話を削除しました")
+                        st.rerun()
+                    else:
+                        st.error("会話の削除に失敗しました")
+            
+            # 日時とメッセージ数を小さく表示
+            st.caption(f"🕒 {formatted_time} • 💬 {message_count}件")
+    else:
+        st.info("💬 まだ保存された会話がありません")
 
 # チャット履歴の表示
 for message in st.session_state.messages:

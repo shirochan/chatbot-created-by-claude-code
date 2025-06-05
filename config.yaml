@@ -57,20 +57,6 @@ history:
   
   # 履歴管理設定
   management:
-    auto_save: true          # 自動保存を有効にするか
+    auto_save: true          # 自動保存を有効にするか（デフォルトで有効）
     max_conversations: 1000  # 保存する最大会話数
     max_messages_per_conversation: 500  # 会話あたりの最大メッセージ数
-    enable_search: true      # 検索機能を有効にするか
-  
-  # エクスポート設定
-  export:
-    supported_formats: ["json", "text", "markdown"]  # サポートするエクスポート形式
-    include_images: true     # エクスポート時に画像を含めるか
-    max_export_size_mb: 100  # エクスポート最大サイズ（MB）
-  
-  # UI設定
-  ui:
-    show_statistics: true    # 統計情報を表示するか
-    show_conversation_list: true  # 会話一覧を表示するか
-    conversation_list_limit: 20   # 一覧表示する会話数
-    enable_conversation_titles: true  # 会話タイトル機能を有効にするか
