@@ -148,6 +148,46 @@ class TestChatHistoryDatabase:
         results = temp_db.search_messages("存在しないキーワード")
         assert len(results) == 0
     
+    def test_search_messages_sql_injection_protection(self, temp_db):
+        """SQLインジェクション攻撃の防止テスト"""
+        session_id = "test_session_sql_injection"
+        
+        # 正常なメッセージを保存
+        temp_db.save_message(session_id, "user", "正常なメッセージです")
+        temp_db.save_message(session_id, "assistant", "こんにちは")
+        
+        # SQLインジェクション攻撃のテストケース
+        malicious_queries = [
+            "'; DROP TABLE messages; --",
+            "' OR '1'='1",
+            "'; DELETE FROM conversations; --",
+            "' UNION SELECT session_id FROM conversations --",
+            "%'; INSERT INTO messages (content) VALUES ('hacked'); --",
+        ]
+        
+        for malicious_query in malicious_queries:
+            # 攻撃クエリが正しく処理され、エラーが発生しないことを確認
+            results = temp_db.search_messages(malicious_query)
+            # 結果が空またはエラーが発生しないことを確認
+            assert isinstance(results, list)
+        
+        # データベースが破損していないことを確認
+        all_messages = temp_db.load_messages(session_id)
+        assert len(all_messages) == 2  # 元のメッセージがそのまま残っている
+        
+        # LIKE句特殊文字のエスケープテスト
+        temp_db.save_message(session_id, "user", "100%完了しました")
+        temp_db.save_message(session_id, "user", "test_value検索")
+        
+        # % や _ を含む検索が正しく動作することを確認
+        results = temp_db.search_messages("100%")
+        assert len(results) == 1
+        assert "100%完了しました" in results[0]["content"]
+        
+        results = temp_db.search_messages("test_value")
+        assert len(results) == 1
+        assert "test_value検索" in results[0]["content"]
+    
     def test_get_conversations(self, temp_db):
         """会話一覧取得のテスト"""
         # 複数の会話を作成
