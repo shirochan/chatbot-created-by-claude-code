@@ -231,7 +231,7 @@ class ChatHistoryDatabase:
     
     def search_messages(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        メッセージを検索
+        メッセージを検索（SQLインジェクション対策済み）
         
         Args:
             query: 検索クエリ
@@ -240,16 +240,28 @@ class ChatHistoryDatabase:
         Returns:
             検索結果のリスト
         """
+        # 入力検証：SQLインジェクション対策
+        if not query or not isinstance(query, str):
+            return []
+        
+        # 長さ制限（DoS攻撃対策）
+        if len(query) > 1000:
+            query = query[:1000]
+        
+        # LIKE句特殊文字のエスケープ
+        escaped_query = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        search_pattern = f'%{escaped_query}%'
+        
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT c.session_id, c.title, c.model_name, m.role, m.content, m.timestamp
                 FROM messages m
                 JOIN conversations c ON m.conversation_id = c.id
-                WHERE m.content LIKE ?
+                WHERE m.content LIKE ? ESCAPE '\\'
                 ORDER BY m.timestamp DESC
                 LIMIT ?
-            ''', (f'%{query}%', limit))
+            ''', (search_pattern, limit))
             
             results = []
             for row in cursor.fetchall():
