@@ -13,7 +13,8 @@ from src.utils.file_processing import (
     process_pdf_with_pypdf2,
     process_pdf_with_pdfplumber,
     encode_image_to_base64,
-    get_image_mime_type
+    get_image_mime_type,
+    validate_file_content
 )
 
 class TestGetFileType:
@@ -40,6 +41,33 @@ class TestGetFileType:
         assert get_file_type("test.svg") == "unknown"  # SVGは未対応
         assert get_file_type("") == "unknown"
         assert get_file_type(None) == "unknown"
+    
+    @patch('src.utils.file_processing.validate_file_content')
+    def test_file_type_with_validation_success(self, mock_validate):
+        """ファイル内容検証成功のテスト"""
+        mock_file = Mock()
+        mock_validate.return_value = True
+        
+        result = get_file_type("test.jpg", mock_file)
+        
+        assert result == "image"
+        mock_validate.assert_called_once_with(mock_file)
+    
+    @patch('src.utils.file_processing.validate_file_content')
+    def test_file_type_with_validation_failure(self, mock_validate):
+        """ファイル内容検証失敗のテスト"""
+        mock_file = Mock()
+        mock_validate.return_value = False
+        
+        result = get_file_type("test.jpg", mock_file)
+        
+        assert result == "unknown"
+        mock_validate.assert_called_once_with(mock_file)
+    
+    def test_file_type_without_validation(self):
+        """ファイル内容検証なしのテスト（後方互換性）"""
+        result = get_file_type("test.jpg")
+        assert result == "image"
 
 class TestProcessImage:
     """画像処理のテスト"""
@@ -356,3 +384,120 @@ class TestMultimodalSupport:
         # GPT-4.1が非対応として設定されていることを確認
         gpt41_config = ModelConfig.MODELS.get("GPT-4.1", {})
         assert gpt41_config.get("supports_vision") is False
+
+class TestFileValidation:
+    """ファイル内容検証のテスト"""
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_success_png(self, mock_magic):
+        """PNG画像ファイルの検証成功テスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'fake_png_data'
+        mock_magic.return_value = 'image/png'
+        
+        result = validate_file_content(mock_file)
+        
+        assert result is True
+        mock_file.seek.assert_called_with(0)
+        mock_file.read.assert_called_once_with(2048)
+        mock_magic.assert_called_once_with(b'fake_png_data', mime=True)
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_success_pdf(self, mock_magic):
+        """PDFファイルの検証成功テスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'fake_pdf_data'
+        mock_magic.return_value = 'application/pdf'
+        
+        result = validate_file_content(mock_file)
+        
+        assert result is True
+        mock_file.seek.assert_called_with(0)
+        mock_magic.assert_called_once_with(b'fake_pdf_data', mime=True)
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_failure_malicious(self, mock_magic):
+        """悪意あるファイルの検証失敗テスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'fake_executable_data'
+        mock_magic.return_value = 'application/x-executable'
+        
+        result = validate_file_content(mock_file)
+        
+        assert result is False
+        mock_file.seek.assert_called_with(0)
+        mock_magic.assert_called_once_with(b'fake_executable_data', mime=True)
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_failure_text(self, mock_magic):
+        """テキストファイルの検証失敗テスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'plain text content'
+        mock_magic.return_value = 'text/plain'
+        
+        result = validate_file_content(mock_file)
+        
+        assert result is False
+        mock_file.seek.assert_called_with(0)
+        mock_magic.assert_called_once_with(b'plain text content', mime=True)
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_exception_handling(self, mock_magic):
+        """例外発生時のテスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.side_effect = Exception("File read error")
+        
+        result = validate_file_content(mock_file)
+        
+        assert result is False
+        mock_file.seek.assert_called_with(0)
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_magic_exception(self, mock_magic):
+        """magic処理例外のテスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'fake_data'
+        mock_magic.side_effect = Exception("Magic processing error")
+        
+        result = validate_file_content(mock_file)
+        
+        assert result is False
+        mock_file.seek.assert_called_with(0)
+    
+    @patch('magic.from_buffer')
+    def test_validate_file_content_file_pointer_reset(self, mock_magic):
+        """ファイルポインタリセット確認テスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'fake_data'
+        mock_magic.return_value = 'image/jpeg'
+        
+        validate_file_content(mock_file)
+        
+        # ファイルポインタが2回先頭に戻されることを確認
+        assert mock_file.seek.call_count == 2
+        from unittest.mock import call
+        mock_file.seek.assert_has_calls([call(0), call(0)])
+    
+    @patch('magic.from_buffer')
+    def test_validate_all_supported_mime_types(self, mock_magic):
+        """サポートされる全MIMEタイプのテスト"""
+        mock_file = Mock()
+        mock_file.seek = Mock()
+        mock_file.read.return_value = b'fake_data'
+        
+        supported_types = [
+            'image/png', 'image/jpeg', 'image/gif', 
+            'image/bmp', 'image/webp', 'application/pdf'
+        ]
+        
+        for mime_type in supported_types:
+            mock_magic.return_value = mime_type
+            result = validate_file_content(mock_file)
+            assert result is True, f"Failed for MIME type: {mime_type}"
