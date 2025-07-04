@@ -9,6 +9,7 @@ from typing import Optional, Tuple, Union
 from PIL import Image
 import PyPDF2
 import pdfplumber
+import magic
 
 logger = logging.getLogger(__name__)
 
@@ -153,27 +154,78 @@ def process_pdf(uploaded_file) -> Optional[str]:
     
     return result
 
-def get_file_type(file_name: str) -> str:
+def get_file_type(file_name: str, uploaded_file=None) -> str:
     """
-    ファイル名から種類を判定
-    
+    ファイル名と内容から種類を判定
+
     Args:
         file_name: ファイル名
-        
+        uploaded_file: Streamlitのアップロードファイルオブジェクト (オプション)
+
     Returns:
         str: ファイル種類 ('image', 'pdf', 'unknown')
     """
     if not file_name:
         return 'unknown'
-    
+
+    # コンテンツベースの検証 (優先)
+    if uploaded_file:
+        try:
+            mime_type = validate_file_content(uploaded_file)
+            if mime_type:
+                if mime_type.startswith('image/'):
+                    return 'image'
+                elif mime_type == 'application/pdf':
+                    return 'pdf'
+        except Exception as e:
+            logger.warning(f"ファイル内容の検証中にエラーが発生: {e}")
+
+    # 拡張子ベースのフォールバック
     extension = file_name.lower().split('.')[-1]
-    
     if extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']:
         return 'image'
     elif extension == 'pdf':
         return 'pdf'
     else:
         return 'unknown'
+
+
+def validate_file_content(uploaded_file) -> Optional[str]:
+    """
+    マジックバイトを使用してファイル内容を検証
+
+    Args:
+        uploaded_file: Streamlitのアップロードファイルオブジェクト
+
+    Returns:
+        str: 検証されたMIMEタイプ、または無効な場合はNone
+    """
+    try:
+        # ファイルの先頭2048バイトを読み込む
+        uploaded_file.seek(0)
+        file_content = uploaded_file.read(2048)
+        uploaded_file.seek(0)  # ポインタを元に戻す
+
+        # MIMEタイプを判定
+        mime_type = magic.from_buffer(file_content, mime=True)
+        logger.info(f"ファイルを検証: {uploaded_file.name}, MIMEタイプ: {mime_type}")
+
+        # 許可されたMIMEタイプのリスト
+        # config.yamlから取得するのが望ましいが、一旦ハードコード
+        allowed_mime_types = {
+            'image/png', 'image/jpeg', 'image/gif',
+            'image/bmp', 'image/webp', 'application/pdf'
+        }
+
+        if mime_type in allowed_mime_types:
+            return mime_type
+        else:
+            logger.warning(f"許可されていないMIMEタイプ: {mime_type} ({uploaded_file.name})")
+            return None
+    except Exception as e:
+        logger.error(f"ファイル内容の検証エラー: {e}")
+        return None
+
 
 def encode_image_to_base64(image: Image.Image, format: str = "PNG") -> str:
     """

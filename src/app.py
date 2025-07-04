@@ -90,8 +90,12 @@ with st.sidebar:
     )
     
     if uploaded_file is not None:
-        file_type = get_file_type(uploaded_file.name)
-        st.success(f"ファイルがアップロードされました: {uploaded_file.name}")
+        file_type = get_file_type(uploaded_file.name, uploaded_file)
+        
+        if file_type == 'unknown':
+            st.error(f"サポートされていないファイル形式です: {uploaded_file.name}")
+        else:
+            st.success(f"ファイルがアップロードされました: {uploaded_file.name}")
         
         if file_type == 'image':
             # 画像プレビュー表示
@@ -245,7 +249,7 @@ if prompt := st.chat_input("メッセージを入力してください..."):
     user_message_data = {"role": "user", "content": user_message_content}
     
     if uploaded_file is not None:
-        file_type = get_file_type(uploaded_file.name)
+        file_type = get_file_type(uploaded_file.name, uploaded_file)
         
         if file_type == 'image':
             # 画像処理
