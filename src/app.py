@@ -13,7 +13,7 @@ if str(project_root) not in sys.path:
 from src.models import create_model, get_available_models
 from src.models.config import ModelConfig
 from src.utils import setup_logging, get_app_config, get_logging_config, get_chat_config, get_file_upload_config, get_history_config
-from src.utils.file_processing import process_image, process_pdf, get_file_type, format_file_content_for_ai, encode_image_to_base64, get_image_mime_type
+from src.utils.file_processing import process_image, process_pdf, get_file_type, format_file_content_for_ai, encode_image_to_base64, get_image_mime_type, sanitize_user_input
 from src.utils.history_manager import ChatHistoryManager
 
 # 環境変数の読み込み
@@ -237,7 +237,7 @@ with st.sidebar:
 # チャット履歴の表示
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(sanitize_user_input(message["content"]))
         # 画像がある場合は表示
         if "image" in message:
             st.image(message["image"], caption="アップロードされた画像", width=300)
@@ -301,7 +301,7 @@ if prompt := st.chat_input("メッセージを入力してください..."):
     
     # ユーザーメッセージを表示
     with st.chat_message("user"):
-        st.markdown(user_message_content)
+        st.markdown(sanitize_user_input(user_message_content))
         if "image" in user_message_data:
             st.image(user_message_data["image"], caption="アップロードされた画像", width=300)
     
