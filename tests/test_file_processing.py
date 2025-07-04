@@ -18,27 +18,35 @@ from src.utils.file_processing import (
 
 class TestGetFileType:
     """ファイル種類判定のテスト"""
-    
-    def test_image_files(self):
+
+    @patch('magic.from_buffer')
+    def test_image_files(self, mock_magic):
         """画像ファイルの判定テスト"""
-        assert get_file_type("test.jpg") == "image"
-        assert get_file_type("test.jpeg") == "image"
-        assert get_file_type("test.png") == "image"
-        assert get_file_type("test.gif") == "image"
-        assert get_file_type("test.bmp") == "image"
-        assert get_file_type("test.webp") == "image"
-        
-    def test_pdf_files(self):
+        mock_magic.return_value = 'image/jpeg'
+        mock_file = io.BytesIO(b"fake image data")
+        assert get_file_type(mock_file) == "image"
+
+    @patch('magic.from_buffer')
+    def test_pdf_files(self, mock_magic):
         """PDFファイルの判定テスト"""
-        assert get_file_type("test.pdf") == "pdf"
-        assert get_file_type("document.PDF") == "pdf"  # 大文字小文字混在
-        
-    def test_unknown_files(self):
+        mock_magic.return_value = 'application/pdf'
+        mock_file = io.BytesIO(b"fake pdf data")
+        assert get_file_type(mock_file) == "pdf"
+
+    @patch('magic.from_buffer')
+    def test_unknown_files(self, mock_magic):
         """未対応ファイルの判定テスト"""
-        assert get_file_type("test.txt") == "unknown"
-        assert get_file_type("test.docx") == "unknown"
-        assert get_file_type("test.svg") == "unknown"  # SVGは未対応
-        assert get_file_type("") == "unknown"
+        mock_magic.return_value = 'text/plain'
+        mock_file = io.BytesIO(b"fake text data")
+        assert get_file_type(mock_file) == "unknown"
+
+    def test_empty_file(self):
+        """空ファイルの判定テスト"""
+        mock_file = io.BytesIO(b"")
+        assert get_file_type(mock_file) == "unknown"
+
+    def test_none_file(self):
+        """Noneが渡された場合のテスト"""
         assert get_file_type(None) == "unknown"
 
 class TestProcessImage:

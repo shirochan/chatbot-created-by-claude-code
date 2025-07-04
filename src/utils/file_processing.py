@@ -9,6 +9,7 @@ from typing import Optional, Tuple, Union
 from PIL import Image
 import PyPDF2
 import pdfplumber
+import magic
 
 logger = logging.getLogger(__name__)
 
@@ -153,26 +154,42 @@ def process_pdf(uploaded_file) -> Optional[str]:
     
     return result
 
-def get_file_type(file_name: str) -> str:
+def get_file_type(uploaded_file) -> str:
     """
-    ファイル名から種類を判定
+    ファイルの内容を検証し、種類を判定
     
     Args:
-        file_name: ファイル名
+        uploaded_file: Streamlitのアップロード��ァイルオブジェクト
         
     Returns:
         str: ファイル種類 ('image', 'pdf', 'unknown')
     """
-    if not file_name:
+    if not uploaded_file:
         return 'unknown'
     
-    extension = file_name.lower().split('.')[-1]
-    
-    if extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']:
-        return 'image'
-    elif extension == 'pdf':
-        return 'pdf'
-    else:
+    try:
+        # ファイルの先頭2048バイトを読み込む
+        uploaded_file.seek(0)
+        file_content = uploaded_file.read(2048)
+        uploaded_file.seek(0)
+        
+        # magicバイトからMIMEタイプを判定
+        mime_type = magic.from_buffer(file_content, mime=True)
+        
+        # 許可されたMIMEタイプ
+        allowed_image_mimes = {'image/png', 'image/jpeg', 'image/gif', 'image/bmp', 'image/webp'}
+        allowed_pdf_mimes = {'application/pdf'}
+        
+        if mime_type in allowed_image_mimes:
+            return 'image'
+        elif mime_type in allowed_pdf_mimes:
+            return 'pdf'
+        else:
+            logger.warning(f"許可されていないファイル形式: {mime_type}")
+            return 'unknown'
+            
+    except Exception as e:
+        logger.error(f"ファイルタイプの検証中にエラーが発生: {e}")
         return 'unknown'
 
 def encode_image_to_base64(image: Image.Image, format: str = "PNG") -> str:
