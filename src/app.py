@@ -90,8 +90,12 @@ with st.sidebar:
     )
     
     if uploaded_file is not None:
-        file_type = get_file_type(uploaded_file.name)
-        st.success(f"ファイルがアップロードされました: {uploaded_file.name}")
+        file_type = get_file_type(uploaded_file.name, uploaded_file)
+        
+        if file_type == 'unknown':
+            st.error("🚫 不正なファイル形式です。安全でないファイルまたはサポートされていないファイル形式です。")
+        else:
+            st.success(f"ファイルがアップロードされました: {uploaded_file.name}")
         
         if file_type == 'image':
             # 画像プレビュー表示

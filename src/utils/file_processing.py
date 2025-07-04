@@ -9,8 +9,49 @@ from typing import Optional, Tuple, Union
 from PIL import Image
 import PyPDF2
 import pdfplumber
+import magic
 
 logger = logging.getLogger(__name__)
+
+def validate_file_content(uploaded_file) -> bool:
+    """
+    ファイル内容をマジックバイトで検証
+    
+    Args:
+        uploaded_file: Streamlitのアップロードファイルオブジェクト
+        
+    Returns:
+        bool: ファイル内容が安全かどうか
+    """
+    try:
+        # ファイルポインタを先頭に戻す
+        uploaded_file.seek(0)
+        
+        # 最初の2048バイトを読み込んで検証
+        file_content = uploaded_file.read(2048)
+        uploaded_file.seek(0)  # ポインタを先頭に戻す
+        
+        # マジックバイトからMIMEタイプを取得
+        mime_type = magic.from_buffer(file_content, mime=True)
+        
+        # 許可されたMIMEタイプのセット
+        allowed_mime_types = {
+            'image/png', 'image/jpeg', 'image/gif', 
+            'image/bmp', 'image/webp', 'application/pdf'
+        }
+        
+        is_valid = mime_type in allowed_mime_types
+        
+        if is_valid:
+            logger.info(f"ファイル検証成功: MIME={mime_type}")
+        else:
+            logger.warning(f"不正なファイル形式を検出: MIME={mime_type}")
+        
+        return is_valid
+        
+    except Exception as e:
+        logger.error(f"ファイル検証エラー: {e}")
+        return False
 
 def process_image(uploaded_file) -> Optional[Tuple[Image.Image, str]]:
     """
@@ -153,12 +194,13 @@ def process_pdf(uploaded_file) -> Optional[str]:
     
     return result
 
-def get_file_type(file_name: str) -> str:
+def get_file_type(file_name: str, uploaded_file=None) -> str:
     """
-    ファイル名から種類を判定
+    ファイル名と内容から種類を判定
     
     Args:
         file_name: ファイル名
+        uploaded_file: アップロードファイルオブジェクト（内容検証用）
         
     Returns:
         str: ファイル種類 ('image', 'pdf', 'unknown')
@@ -166,8 +208,21 @@ def get_file_type(file_name: str) -> str:
     if not file_name:
         return 'unknown'
     
+    # 拡張子による基本判定
     extension = file_name.lower().split('.')[-1]
     
+    # 拡張子が不正な場合は即座に拒否
+    allowed_extensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'pdf']
+    if extension not in allowed_extensions:
+        return 'unknown'
+    
+    # ファイル内容がある場合は内容検証を実施
+    if uploaded_file is not None:
+        if not validate_file_content(uploaded_file):
+            logger.warning(f"ファイル内容検証失敗: {file_name}")
+            return 'unknown'
+    
+    # 拡張子による分類
     if extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']:
         return 'image'
     elif extension == 'pdf':
