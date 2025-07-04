@@ -18,6 +18,7 @@ dependencies = [
     "pypdf2>=3.0.0",
     "pdfplumber>=0.10.0",
     "python-magic>=0.4.27",
+    "bleach>=6.2.0",
 ]
 
 # [project.scripts]
