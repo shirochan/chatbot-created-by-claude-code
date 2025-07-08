@@ -609,4 +609,4 @@ class TestSanitizeUserInput:
         # エラーが発生してもHTMLエスケープは実行される
         assert result is not None
         assert "&lt;script&gt;" in result
-        assert "alert('XSS')" in result  # エスケープされた状態で含まれる
+        assert "alert(&#x27;XSS&#x27;)" in result  # エスケープされた状態で含まれる

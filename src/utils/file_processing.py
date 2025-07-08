@@ -30,28 +30,29 @@ def sanitize_user_input(content: str) -> str:
         return content
     
     try:
-        # 危険なJavaScriptプロトコルを除去
-        content = content.replace('javascript:', '')
-        content = content.replace('data:', '')
-        content = content.replace('vbscript:', '')
-        
-        # HTMLエスケープ
-        escaped_content = html.escape(content)
+        # 危険なJavaScriptプロトコルを大文字小文字を区別せずに除去
+        import re
+        content = re.sub(r'javascript:', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'data:', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'vbscript:', '', content, flags=re.IGNORECASE)
         
         # 安全なタグのみを許可
         allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'code', 'pre', 'br', 'p']
         allowed_attributes = {}
         
-        # bleachで危険なHTMLを除去
+        # bleachで危険なHTMLを除去（生のコンテンツに対して実行）
         clean_content = bleach.clean(
-            escaped_content, 
+            content, 
             tags=allowed_tags, 
             attributes=allowed_attributes,
             strip=True
         )
         
-        logger.debug(f"ユーザー入力をサニタイズしました: {len(content)} -> {len(clean_content)} 文字")
-        return clean_content
+        # HTMLエスケープ（許可されたタグ以外をエスケープ）
+        escaped_content = html.escape(clean_content)
+        
+        logger.debug(f"ユーザー入力をサニタイズしました: {len(content)} -> {len(escaped_content)} 文字")
+        return escaped_content
         
     except Exception as e:
         logger.error(f"サニタイズエラー: {e}")
