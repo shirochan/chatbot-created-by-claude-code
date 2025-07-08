@@ -9,15 +9,18 @@ LangChainを使用したマルチプロバイダー対応のAIチャットボッ
 - **リアルタイム会話**: AIとのインタラクティブなチャット
 - **モデル選択**: 5つのAIモデルから選択可能
   - GPT-4o (OpenAI) - 🖼️ 画像対応
-  - GPT-4.1 (OpenAI) - 📝 テキストのみ
-  - Claude Sonnet 4 (Anthropic) - 🖼️ 画像対応
-  - Claude Opus 4 (Anthropic) - 🖼️ 画像対応
-  - Gemini 2.5 Flash (Google) - 🖼️ 画像対応
+  - GPT-4.1 (OpenAI) - 📝 最新のGPTモデル、コーディングと推論が大幅向上
+  - Claude Sonnet 4 (Anthropic) - 🖼️ スマートで効率的な日常使いに最適なモデル
+  - Claude Opus 4 (Anthropic) - 🖼️ 世界最高のコーディングモデル、最も知的なAI
+  - Gemini 2.5 Flash (Google) - 🖼️ 思考機能付きハイブリッド推論モデル、速度と効率重視
 - **ファイルアップロード**: PNG, JPG, JPEG, GIF, BMP, WebP, PDF対応
+  - 画像ファイル：最大10MB、最大解像度2048x2048
+  - PDFファイル：最大50MB、デュアルエンジン処理（pdfplumber + PyPDF2）
 - **チャット履歴管理**: 自動保存機能付きの永続的な会話履歴
   - 過去の会話を簡単に表示・切り替え
   - 会話ごとの個別削除機能
   - デフォルトで履歴自動保存
+  - 自動バックアップ機能（24時間間隔）
 - **レスポンシブUI**: Streamlitベースのクリーンなインターフェース
 - **包括的テスト**: 80のテストケースによる品質保証
 
@@ -67,7 +70,7 @@ chatbot-created-by-claude-code/
 
 1. **リポジトリのクローン**:
 ```bash
-git clone https://github.com/your-username/chatbot-created-by-claude-code.git
+git clone https://github.com/shirochan/chatbot-created-by-claude-code.git
 cd chatbot-created-by-claude-code
 ```
 
@@ -217,10 +220,38 @@ chat:
   default_model: "GPT-4o"             # デフォルトで選択されるモデル
   show_model_description: true        # モデル説明の表示
 
+# ファイルアップロード設定
+file_upload:
+  # 対応ファイル形式
+  supported_formats:
+    image: ["png", "jpg", "jpeg", "gif", "bmp", "webp"]
+    pdf: ["pdf"]
+  
+  # ファイルサイズ制限 (MB)
+  max_file_size:
+    image: 10
+    pdf: 50
+  
+  # 画像処理設定
+  image_processing:
+    default_format: "PNG"
+    quality: 95
+    max_dimension: 2048  # 最大幅・高さ (ピクセル)
+  
+  # PDF処理設定
+  pdf_processing:
+    preview_length: 500  # プレビュー文字数
+    engines: ["pdfplumber", "pypdf2"]  # 使用するエンジンの優先順位
+
 # チャット履歴設定
 history:
+  # データベース設定
   database:
     path: "chat_history.db"           # データベースファイルのパス
+    backup_enabled: true              # バックアップを有効にするか
+    backup_interval: 24               # バックアップ間隔（時間）
+  
+  # 履歴管理設定
   management:
     auto_save: true                   # 自動保存を有効にするか（デフォルトで有効）
     max_conversations: 1000           # 保存する最大会話数
