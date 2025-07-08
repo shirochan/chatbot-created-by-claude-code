@@ -61,29 +61,50 @@ This is a multi-provider AI chatbot built with Streamlit and LangChain that supp
 **Models Layer (`src/models/`)**
 - `factory.py`: Central model factory that creates LangChain model instances based on provider
 - `config.py`: Model definitions with provider mappings, API key requirements, descriptions, and vision support flags
-- Supports 5 models across 3 providers: GPT-4o/4.1 (OpenAI), Claude Sonnet 4/Opus 4 (Anthropic), Gemini 2.5 Flash (Google)
-- Vision support: GPT-4o, Claude Sonnet 4, Claude Opus 4, and Gemini 2.5 Flash support image understanding
+- Supports 5 models across 3 providers:
+  - GPT-4o (OpenAI): OpenAIの最新マルチモーダルモデル - 🖼️ Vision support
+  - GPT-4.1 (OpenAI): 最新のGPTモデル、コーディングと推論が大幅向上 - 📝 Text only
+  - Claude Sonnet 4 (Anthropic): スマートで効率的な日常使いに最適なモデル - 🖼️ Vision support
+  - Claude Opus 4 (Anthropic): 世界最高のコーディングモデル、最も知的なAI - 🖼️ Vision support
+  - Gemini 2.5 Flash (Google): 思考機能付きハイブリッド推論モデル、速度と効率重視 - 🖼️ Vision support
 
 **File Processing Layer (`src/utils/file_processing.py`)**
 - Image processing with PIL/Pillow: supports PNG, JPG, JPEG, GIF, BMP, WebP formats
+  - File size limit: 10MB per image
+  - Maximum resolution: 2048x2048 pixels
+  - Quality setting: 95% for processed images
 - PDF text extraction with dual-engine approach: pdfplumber (primary) + PyPDF2 (fallback)
+  - File size limit: 50MB per PDF
+  - Preview length: 500 characters
 - Base64 encoding for image transmission to LLM APIs
 - Comprehensive error handling and logging
 
+**Chat History Management Layer (`src/utils/database.py` & `src/utils/history_manager.py`)**
+- SQLite database for persistent chat history storage
+- Automatic conversation saving and retrieval
+- Individual conversation deletion capabilities
+- Automatic backup system with 24-hour intervals
+- Maximum conversation limits: 1000 conversations, 500 messages per conversation
+
 **Configuration System**
 - `config.yaml`: Central app configuration (UI settings, logging, chat behavior, file upload settings)
+  - File upload settings: supported formats, size limits (10MB images, 50MB PDFs), processing quality
+  - Chat history settings: auto-save, backup intervals, conversation limits
+  - Streamlit UI configuration: layout, sidebar state, page settings
 - Environment variables: API keys for each provider (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`)
 - Model availability determined by presence of corresponding API keys
-- File upload configuration: supported formats, size limits, processing settings
+- Database configuration: SQLite path, backup settings, retention policies
 
 **App Flow (`src/app.py`)**
 1. Load configuration and environment variables
 2. Initialize available models based on API keys
-3. Streamlit UI with model selection sidebar and file upload widget
-4. Process uploaded files (images/PDFs) and display previews
-5. Chat interface converts messages to LangChain format (including multimodal content)
-6. Send images as base64-encoded content to vision-capable models
-7. Error handling with provider-specific error messages
+3. Setup chat history database and management system
+4. Streamlit UI with model selection sidebar, file upload widget, and chat history panel
+5. Process uploaded files (images/PDFs) with size/format validation and display previews
+6. Chat interface converts messages to LangChain format (including multimodal content)
+7. Send images as base64-encoded content to vision-capable models
+8. Save conversations automatically to database with backup scheduling
+9. Error handling with provider-specific error messages and comprehensive logging
 
 ### Key Design Patterns
 
@@ -98,6 +119,10 @@ This is a multi-provider AI chatbot built with Streamlit and LangChain that supp
 **Multimodal Support**: Automatic detection of vision-capable models with appropriate content encoding (base64 for images, text extraction for PDFs)
 
 **Dual-Engine Processing**: Fallback mechanisms for robust file processing (pdfplumber → PyPDF2 for PDFs)
+
+**Database-Driven History**: Persistent chat history with SQLite backend, automatic backup, and conversation management
+
+**Configuration-First Approach**: All limits, settings, and behaviors configurable via YAML without code changes
 
 ### Environment Setup Requirements
 
