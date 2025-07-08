@@ -14,7 +14,8 @@ from src.utils.file_processing import (
     process_pdf_with_pdfplumber,
     encode_image_to_base64,
     get_image_mime_type,
-    validate_file_content
+    validate_file_content,
+    sanitize_user_input
 )
 
 class TestGetFileType:
@@ -501,3 +502,111 @@ class TestFileValidation:
             mock_magic.return_value = mime_type
             result = validate_file_content(mock_file)
             assert result is True, f"Failed for MIME type: {mime_type}"
+
+class TestSanitizeUserInput:
+    """ユーザー入力サニタイズのテスト"""
+    
+    def test_sanitize_basic_html_escape(self):
+        """基本的なHTMLエスケープのテスト"""
+        input_text = "<script>alert('XSS')</script>"
+        result = sanitize_user_input(input_text)
+        
+        # スクリプトタグがエスケープされていることを確認
+        assert "<script>" not in result
+        assert "alert('XSS')" not in result
+        assert "&lt;script&gt;" in result or "script" not in result
+    
+    def test_sanitize_img_tag_attack(self):
+        """imgタグを使ったXSS攻撃のテスト"""
+        input_text = "<img src=x onerror=alert('XSS')>"
+        result = sanitize_user_input(input_text)
+        
+        # imgタグとonerrorが除去されていることを確認
+        assert "<img" not in result
+        assert "onerror" not in result
+        assert "alert('XSS')" not in result
+    
+    def test_sanitize_javascript_protocol(self):
+        """JavaScriptプロトコルを使った攻撃のテスト"""
+        input_text = "[Click me](javascript:alert('XSS'))"
+        result = sanitize_user_input(input_text)
+        
+        # JavaScriptプロトコルが除去されていることを確認
+        assert "javascript:" not in result
+        assert "alert('XSS')" not in result
+    
+    def test_sanitize_allowed_tags(self):
+        """許可されたタグの処理テスト"""
+        input_text = "<b>Bold text</b> <em>Emphasized text</em> <code>Code text</code>"
+        result = sanitize_user_input(input_text)
+        
+        # 許可されたタグが保持されていることを確認
+        assert "<b>" in result or "Bold text" in result
+        assert "<em>" in result or "Emphasized text" in result
+        assert "<code>" in result or "Code text" in result
+    
+    def test_sanitize_mixed_content(self):
+        """許可されたタグと危険なタグの混在テスト"""
+        input_text = "<b>Safe bold</b> <script>alert('XSS')</script> <em>Safe emphasis</em>"
+        result = sanitize_user_input(input_text)
+        
+        # 安全なタグは保持、危険なタグは除去
+        assert ("Safe bold" in result)
+        assert ("Safe emphasis" in result)
+        assert "<script>" not in result
+        assert "alert('XSS')" not in result
+    
+    def test_sanitize_empty_content(self):
+        """空の内容のテスト"""
+        assert sanitize_user_input("") == ""
+        assert sanitize_user_input(None) is None
+    
+    def test_sanitize_normal_text(self):
+        """通常のテキストの処理テスト"""
+        input_text = "This is normal text without any HTML tags."
+        result = sanitize_user_input(input_text)
+        
+        # 通常のテキストはそのまま保持
+        assert result == input_text
+    
+    def test_sanitize_complex_xss_attack(self):
+        """複雑なXSS攻撃のテスト"""
+        input_text = """
+        <div onclick="alert('XSS')">Click me</div>
+        <svg onload="alert('XSS')">
+        <iframe src="javascript:alert('XSS')"></iframe>
+        <a href="javascript:alert('XSS')">Link</a>
+        """
+        result = sanitize_user_input(input_text)
+        
+        # 全ての危険な要素が除去されていることを確認
+        assert "onclick" not in result
+        assert "onload" not in result
+        assert "javascript:" not in result
+        assert "alert('XSS')" not in result
+        assert "<svg" not in result
+        assert "<iframe" not in result
+    
+    def test_sanitize_error_handling(self):
+        """エラーハンドリングのテスト"""
+        # 非常に長い文字列や特殊文字でエラーが発生しないことを確認
+        long_text = "A" * 10000 + "<script>alert('XSS')</script>"
+        result = sanitize_user_input(long_text)
+        
+        # エラーが発生せず、危険なコンテンツが除去されていることを確認
+        assert result is not None
+        assert "<script>" not in result
+        assert "alert('XSS')" not in result
+    
+    @patch('src.utils.file_processing.bleach.clean')
+    def test_sanitize_bleach_exception(self, mock_clean):
+        """bleach処理でエラーが発生した場合のフォールバックテスト"""
+        mock_clean.side_effect = Exception("Bleach error")
+        
+        input_text = "<script>alert('XSS')</script>"
+        result = sanitize_user_input(input_text)
+        
+        # エラーが発生してもHTMLエスケープは実行される
+        assert result is not None
+        assert "&lt;script&gt;" in result
+        assert "alert(&#x27;XSS&#x27;)" in result  # エスケープされた状態で含まれる

@@ -5,13 +5,59 @@
 import io
 import base64
 import logging
+import html
 from typing import Optional, Tuple, Union
 from PIL import Image
 import PyPDF2
 import pdfplumber
 import magic
+import bleach
 
 logger = logging.getLogger(__name__)
+
+def sanitize_user_input(content: str) -> str:
+    """
+    ユーザー入力を安全な表示用にサニタイズ
+    XSS攻撃を防ぐためHTMLをエスケープし、安全なタグのみを許可
+    
+    Args:
+        content: サニタイズするテキスト
+        
+    Returns:
+        str: サニタイズされた安全なテキスト
+    """
+    if not content:
+        return content
+    
+    try:
+        # 危険なJavaScriptプロトコルを大文字小文字を区別せずに除去
+        import re
+        content = re.sub(r'javascript:', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'data:', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'vbscript:', '', content, flags=re.IGNORECASE)
+        
+        # 安全なタグのみを許可
+        allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'code', 'pre', 'br', 'p']
+        allowed_attributes = {}
+        
+        # bleachで危険なHTMLを除去（生のコンテンツに対して実行）
+        clean_content = bleach.clean(
+            content, 
+            tags=allowed_tags, 
+            attributes=allowed_attributes,
+            strip=True
+        )
+        
+        # HTMLエスケープ（許可されたタグ以外をエスケープ）
+        escaped_content = html.escape(clean_content)
+        
+        logger.debug(f"ユーザー入力をサニタイズしました: {len(content)} -> {len(escaped_content)} 文字")
+        return escaped_content
+        
+    except Exception as e:
+        logger.error(f"サニタイズエラー: {e}")
+        # エラーが発生した場合は基本的なHTMLエスケープのみ実行
+        return html.escape(content)
 
 def validate_file_content(uploaded_file) -> bool:
     """
